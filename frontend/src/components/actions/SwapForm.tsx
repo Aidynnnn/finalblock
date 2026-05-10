@@ -32,8 +32,7 @@ export function SwapForm() {
   const token0 = tokens?.[0].result as Address | undefined
   const token1 = tokens?.[1].result as Address | undefined
 
-  const tokenIn  = swapDirection === 0 ? token0 : token1
-  const tokenOut = swapDirection === 0 ? token1 : token0
+  const tokenIn = swapDirection === 0 ? token0 : token1
 
   // ── Token symbols ────────────────────────────────────────────
   const { data: symbolData } = useReadContracts({

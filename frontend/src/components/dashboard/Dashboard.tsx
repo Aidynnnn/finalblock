@@ -132,7 +132,7 @@ export function Dashboard() {
             loading={loadingGov}
           />
         </div>
-        {!selfDelegated && votingPower === 0n && dgovBalance && dgovBalance > 0n && (
+        {!selfDelegated && votingPower === 0n && dgovBalance !== undefined && dgovBalance > 0n && (
           <p className="mt-3 text-sm text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-2">
             You have {dgovSymbol} tokens but no voting power. Use the Vote tab to delegate to yourself.
           </p>

@@ -33,7 +33,6 @@ export function VaultDepositForm() {
 
   const isPaused     = vaultInfo?.[0].result as boolean | undefined
   const totalAssets  = vaultInfo?.[1].result as bigint | undefined
-  const totalShares  = vaultInfo?.[2].result as bigint | undefined
   const userShares   = vaultInfo?.[3].result as bigint | undefined
   const assetAddr    = vaultInfo?.[4].result as `0x${string}` | undefined
   const version      = vaultInfo?.[5].result as string | undefined
