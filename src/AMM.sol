@@ -113,28 +113,13 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
     // ────────────────────────────────────────────────────────────────
 
     /// @notice Emitted when liquidity is added.
-    event LiquidityAdded(
-        address indexed provider,
-        uint256 amount0,
-        uint256 amount1,
-        uint256 lpTokensMinted
-    );
+    event LiquidityAdded(address indexed provider, uint256 amount0, uint256 amount1, uint256 lpTokensMinted);
 
     /// @notice Emitted when liquidity is removed.
-    event LiquidityRemoved(
-        address indexed provider,
-        uint256 amount0,
-        uint256 amount1,
-        uint256 lpTokensBurned
-    );
+    event LiquidityRemoved(address indexed provider, uint256 amount0, uint256 amount1, uint256 lpTokensBurned);
 
     /// @notice Emitted on every successful swap.
-    event Swap(
-        address indexed swapper,
-        address indexed tokenIn,
-        uint256 amountIn,
-        uint256 amountOut
-    );
+    event Swap(address indexed swapper, address indexed tokenIn, uint256 amountIn, uint256 amountOut);
 
     /// @notice Emitted whenever reserves change, for off-chain price tracking.
     event ReservesUpdated(uint256 reserve0, uint256 reserve1);
@@ -147,16 +132,12 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
     /// @param tokenB The other pool token.
     /// @dev   Tokens are sorted by address so that (tokenA, tokenB) and (tokenB, tokenA)
     ///        produce the same deterministic pair address when created via the Factory.
-    constructor(address tokenA, address tokenB)
-        ERC20("DeFiApp LP Token", "DLPT")
-    {
+    constructor(address tokenA, address tokenB) ERC20("DeFiApp LP Token", "DLPT") {
         if (tokenA == address(0) || tokenB == address(0)) revert AMM__ZeroAddress();
         if (tokenA == tokenB) revert AMM__IdenticalTokens();
 
         // Sort tokens so token0 always has the smaller address.
-        (token0, token1) = tokenA < tokenB
-            ? (IERC20(tokenA), IERC20(tokenB))
-            : (IERC20(tokenB), IERC20(tokenA));
+        (token0, token1) = tokenA < tokenB ? (IERC20(tokenA), IERC20(tokenB)) : (IERC20(tokenB), IERC20(tokenA));
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -177,17 +158,12 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
     /// @param tokenIn   The token the caller wants to sell.
     /// @param amountIn  Gross amount of tokenIn (before fee deduction).
     /// @return amountOut Net amount of the other token the caller would receive.
-    function getAmountOut(address tokenIn, uint256 amountIn)
-        external
-        view
-        returns (uint256 amountOut)
-    {
+    function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256 amountOut) {
         if (amountIn == 0) revert AMM__ZeroAmount();
         _validateToken(tokenIn);
 
-        (uint256 reserveIn, uint256 reserveOut) = tokenIn == address(token0)
-            ? (_reserve0, _reserve1)
-            : (_reserve1, _reserve0);
+        (uint256 reserveIn, uint256 reserveOut) =
+            tokenIn == address(token0) ? (_reserve0, _reserve1) : (_reserve1, _reserve0);
 
         amountOut = _calcAmountOut(amountIn, reserveIn, reserveOut);
     }
@@ -219,11 +195,7 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
         uint256 amount1Min,
         address to,
         uint256 deadline
-    )
-        external
-        nonReentrant
-        returns (uint256 amount0, uint256 amount1, uint256 liquidity)
-    {
+    ) external nonReentrant returns (uint256 amount0, uint256 amount1, uint256 liquidity) {
         // ── Checks ───────────────────────────────────────────────────
         _checkDeadline(deadline);
         if (to == address(0)) revert AMM__ZeroAddress();
@@ -302,13 +274,7 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
     /// @param deadline   Unix timestamp after which the tx reverts.
     /// @return amount0   Token0 returned to `to`.
     /// @return amount1   Token1 returned to `to`.
-    function removeLiquidity(
-        uint256 liquidity,
-        uint256 amount0Min,
-        uint256 amount1Min,
-        address to,
-        uint256 deadline
-    )
+    function removeLiquidity(uint256 liquidity, uint256 amount0Min, uint256 amount1Min, address to, uint256 deadline)
         external
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
@@ -362,13 +328,7 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
     /// @param to           Recipient of the output token.
     /// @param deadline     Unix timestamp after which the tx reverts.
     /// @return amountOut   Actual amount of the output token transferred to `to`.
-    function swap(
-        address tokenIn,
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address to,
-        uint256 deadline
-    )
+    function swap(address tokenIn, uint256 amountIn, uint256 amountOutMin, address to, uint256 deadline)
         external
         nonReentrant
         returns (uint256 amountOut)
@@ -380,9 +340,7 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
         _validateToken(tokenIn);
 
         bool zeroForOne = tokenIn == address(token0);
-        (uint256 reserveIn, uint256 reserveOut) = zeroForOne
-            ? (_reserve0, _reserve1)
-            : (_reserve1, _reserve0);
+        (uint256 reserveIn, uint256 reserveOut) = zeroForOne ? (_reserve0, _reserve1) : (_reserve1, _reserve0);
 
         if (reserveIn == 0 || reserveOut == 0) revert AMM__InsufficientLiquidity();
 
@@ -396,7 +354,7 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
         // Snapshot k before reserve update for the invariant check below.
         uint256 kBefore = _reserve0 * _reserve1;
 
-        uint256 newReserveIn  = reserveIn  + amountIn;
+        uint256 newReserveIn = reserveIn + amountIn;
         uint256 newReserveOut = reserveOut - amountOut;
 
         if (zeroForOne) {
@@ -451,26 +409,22 @@ contract ConstantProductAMM is ERC20, ReentrancyGuard {
     ///      and Solidity 0.8 built-in overflow reverts protect us.  For a production
     ///      deployment targeting tokens with supplies > 2^128 / 997, consider using
     ///      FullMath (mulDiv) from Uniswap V3 libraries.
-    function _calcAmountOut(
-        uint256 amountIn,
-        uint256 reserveIn,
-        uint256 reserveOut
-    ) private pure returns (uint256 amountOut) {
+    function _calcAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
+        private
+        pure
+        returns (uint256 amountOut)
+    {
         // Apply 0.3% fee to the input (multiply by 997, divide by 1000 later).
-        uint256 amountInWithFee = amountIn * FEE_NUMERATOR;          // ×997
-        uint256 numerator       = amountInWithFee * reserveOut;       // ×997 × reserveOut
-        uint256 denominator     = (reserveIn * FEE_DENOMINATOR) + amountInWithFee; // ×1000 + ×997
-        amountOut               = numerator / denominator;             // integer division → floors
+        uint256 amountInWithFee = amountIn * FEE_NUMERATOR; // ×997
+        uint256 numerator = amountInWithFee * reserveOut; // ×997 × reserveOut
+        uint256 denominator = (reserveIn * FEE_DENOMINATOR) + amountInWithFee; // ×1000 + ×997
+        amountOut = numerator / denominator; // integer division → floors
     }
 
     /// @dev Proportional quote: given an exact amount of one token, how much of the
     ///      other must be supplied to maintain the current price ratio?
     ///      quote = amountA * reserveB / reserveA
-    function _quote(
-        uint256 amountA,
-        uint256 reserveA,
-        uint256 reserveB
-    ) private pure returns (uint256 amountB) {
+    function _quote(uint256 amountA, uint256 reserveA, uint256 reserveB) private pure returns (uint256 amountB) {
         if (amountA == 0) revert AMM__ZeroAmount();
         if (reserveA == 0 || reserveB == 0) revert AMM__InsufficientLiquidity();
         amountB = (amountA * reserveB) / reserveA;

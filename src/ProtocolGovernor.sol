@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Governor}                    from "@openzeppelin/contracts/governance/Governor.sol";
-import {GovernorSettings}            from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
-import {GovernorCountingSimple}      from "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
-import {GovernorVotes}               from "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import {GovernorVotesQuorumFraction} from "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
-import {GovernorTimelockControl}     from "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
-import {IVotes}                      from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {TimelockController}          from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {Governor} from "@openzeppelin/contracts/governance/Governor.sol";
+import {GovernorSettings} from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
+import {GovernorCountingSimple} from "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
+import {GovernorVotes} from "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
+import {
+    GovernorVotesQuorumFraction
+} from "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import {GovernorTimelockControl} from "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
 /// @title  ProtocolGovernor
 /// @notice Production-grade OpenZeppelin v5 Governor stack for the DeFi Super-App.
@@ -176,23 +178,22 @@ contract ProtocolGovernor is
     ///                         This Governor must hold PROPOSER_ROLE + CANCELLER_ROLE
     ///                         on that Timelock (granted in the deployment script).
     ///                         All executed proposal calls are relayed through it.
-    constructor(
-        IVotes            governanceToken,
-        TimelockController timelock
-    )
+    constructor(IVotes governanceToken, TimelockController timelock)
         Governor("ProtocolGovernor")
         GovernorSettings(
-            VOTING_DELAY_SECONDS,   // 86 400 s  — stored as uint48 in GovernorSettings
-            VOTING_PERIOD_SECONDS,  // 604 800 s — stored as uint32 in GovernorSettings
-            0                       // stored proposalThreshold; dynamically overridden
-                                    // below so this stored value is intentionally 0
+            VOTING_DELAY_SECONDS, // 86 400 s  — stored as uint48 in GovernorSettings
+            VOTING_PERIOD_SECONDS, // 604 800 s — stored as uint32 in GovernorSettings
+            0 // stored proposalThreshold; dynamically overridden
+            // below so this stored value is intentionally 0
         )
         GovernorVotes(governanceToken)
         GovernorVotesQuorumFraction(QUORUM_NUMERATOR_PCT)
         GovernorTimelockControl(timelock)
     {
-        if (address(governanceToken) == address(0)) revert Governor__ZeroAddress();
-        if (address(timelock)        == address(0)) revert Governor__ZeroAddress();
+        if (address(governanceToken) == address(0)) {
+            revert Governor__ZeroAddress();
+        }
+        if (address(timelock) == address(0)) revert Governor__ZeroAddress();
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -205,12 +206,7 @@ contract ProtocolGovernor is
     ///
     /// @return Current Unix timestamp cast to uint48.
     ///         uint48 safely represents timestamps until the year 8 921 556.
-    function clock()
-        public
-        view
-        override(Governor, GovernorVotes)
-        returns (uint48)
-    {
+    function clock() public view override(Governor, GovernorVotes) returns (uint48) {
         return uint48(block.timestamp);
     }
 
@@ -219,12 +215,7 @@ contract ProtocolGovernor is
     ///         Snapshot, ethers.js governance utilities) that delay and period values
     ///         are in seconds, not block numbers.
     // solhint-disable-next-line func-name-mixedcase
-    function CLOCK_MODE()
-        public
-        pure
-        override(Governor, GovernorVotes)
-        returns (string memory)
-    {
+    function CLOCK_MODE() public pure override(Governor, GovernorVotes) returns (string memory) {
         return "mode=timestamp";
     }
 
@@ -253,12 +244,7 @@ contract ProtocolGovernor is
     ///           is expected to be orders of magnitude above 100 DGOV.
     ///
     /// @return threshold Minimum votes in token base units (1e18 scale) to open a proposal.
-    function proposalThreshold()
-        public
-        view
-        override(Governor, GovernorSettings)
-        returns (uint256 threshold)
-    {
+    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256 threshold) {
         // token() is exposed by GovernorVotes and returns the IVotes reference set
         // in the constructor.  IVotes does not include totalSupply(), so we issue a
         // low-level staticcall to read it without importing a separate interface.
@@ -267,9 +253,7 @@ contract ProtocolGovernor is
 
         // staticcall is side-effect-free and cannot modify state.
         // abi.encodeWithSignature produces the standard 4-byte selector for totalSupply().
-        (bool success, bytes memory returndata) = tokenAddr.staticcall(
-            abi.encodeWithSignature("totalSupply()")
-        );
+        (bool success, bytes memory returndata) = tokenAddr.staticcall(abi.encodeWithSignature("totalSupply()"));
 
         // Defensive fallback: if the staticcall fails for any reason (a hypothetical
         // bug in the token contract, or the token being replaced by an incompatible
@@ -298,12 +282,7 @@ contract ProtocolGovernor is
     ///         Override required: both Governor and GovernorSettings declare this virtual.
     ///
     /// @return delay Voting delay in seconds (86 400 = 1 day).
-    function votingDelay()
-        public
-        view
-        override(Governor, GovernorSettings)
-        returns (uint256)
-    {
+    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.votingDelay();
     }
 
@@ -313,12 +292,7 @@ contract ProtocolGovernor is
     ///         Override required: both Governor and GovernorSettings declare this virtual.
     ///
     /// @return period Voting period in seconds (604 800 = 1 week).
-    function votingPeriod()
-        public
-        view
-        override(Governor, GovernorSettings)
-        returns (uint256)
-    {
+    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.votingPeriod();
     }
 
@@ -334,12 +308,7 @@ contract ProtocolGovernor is
     ///
     /// @param  timepoint  The clock value (Unix timestamp) of the proposal snapshot.
     /// @return minimumVotes Minimum total votes (For + Abstain) for the proposal to be valid.
-    function quorum(uint256 timepoint)
-        public
-        view
-        override(Governor, GovernorVotesQuorumFraction)
-        returns (uint256)
-    {
+    function quorum(uint256 timepoint) public view override(Governor, GovernorVotesQuorumFraction) returns (uint256) {
         return super.quorum(timepoint);
     }
 
@@ -354,12 +323,7 @@ contract ProtocolGovernor is
     ///
     /// @param  proposalId  The unique ID of the proposal (keccak256 of its parameters).
     /// @return ProposalState enum value.
-    function state(uint256 proposalId)
-        public
-        view
-        override(Governor, GovernorTimelockControl)
-        returns (ProposalState)
-    {
+    function state(uint256 proposalId) public view override(Governor, GovernorTimelockControl) returns (ProposalState) {
         return super.state(proposalId);
     }
 
@@ -389,13 +353,9 @@ contract ProtocolGovernor is
     function propose(
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        string    memory description
-    )
-        public
-        override
-        returns (uint256)
-    {
+        bytes[] memory calldatas,
+        string memory description
+    ) public override returns (uint256) {
         return super.propose(targets, values, calldatas, description);
     }
 
@@ -418,13 +378,9 @@ contract ProtocolGovernor is
     function queue(
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        bytes32          descriptionHash
-    )
-        public
-        override
-        returns (uint256)
-    {
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) public override returns (uint256) {
         return super.queue(targets, values, calldatas, descriptionHash);
     }
 
@@ -449,14 +405,9 @@ contract ProtocolGovernor is
     function execute(
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        bytes32          descriptionHash
-    )
-        public
-        payable
-        override
-        returns (uint256)
-    {
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) public payable override returns (uint256) {
         return super.execute(targets, values, calldatas, descriptionHash);
     }
 
@@ -482,13 +433,9 @@ contract ProtocolGovernor is
     function cancel(
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        bytes32          descriptionHash
-    )
-        public
-        override
-        returns (uint256)
-    {
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) public override returns (uint256) {
         return super.cancel(targets, values, calldatas, descriptionHash);
     }
 
@@ -511,16 +458,12 @@ contract ProtocolGovernor is
     /// @return etaSeconds      The earliest timestamp (Unix) at which the operations
     ///                         can be executed (block.timestamp + MIN_DELAY).
     function _queueOperations(
-        uint256          proposalId,
+        uint256 proposalId,
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        bytes32          descriptionHash
-    )
-        internal
-        override(Governor, GovernorTimelockControl)
-        returns (uint48)
-    {
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) returns (uint48) {
         return super._queueOperations(proposalId, targets, values, calldatas, descriptionHash);
     }
 
@@ -538,15 +481,12 @@ contract ProtocolGovernor is
     /// @param  calldatas       Encoded calldata per call.
     /// @param  descriptionHash keccak256 of description.
     function _executeOperations(
-        uint256          proposalId,
+        uint256 proposalId,
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        bytes32          descriptionHash
-    )
-        internal
-        override(Governor, GovernorTimelockControl)
-    {
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) {
         super._executeOperations(proposalId, targets, values, calldatas, descriptionHash);
     }
 
@@ -566,13 +506,9 @@ contract ProtocolGovernor is
     function _cancel(
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        bytes32          descriptionHash
-    )
-        internal
-        override(Governor, GovernorTimelockControl)
-        returns (uint256)
-    {
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) internal override(Governor, GovernorTimelockControl) returns (uint256) {
         return super._cancel(targets, values, calldatas, descriptionHash);
     }
 
@@ -586,12 +522,7 @@ contract ProtocolGovernor is
     ///         Override required: both Governor and GovernorTimelockControl declare virtual.
     ///
     /// @return The ProtocolTimelock contract address.
-    function _executor()
-        internal
-        view
-        override(Governor, GovernorTimelockControl)
-        returns (address)
-    {
+    function _executor() internal view override(Governor, GovernorTimelockControl) returns (address) {
         return super._executor();
     }
 
@@ -609,12 +540,7 @@ contract ProtocolGovernor is
     ///
     /// @param  interfaceId  ERC165 interface selector to query.
     /// @return True if this contract implements the requested interface.
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -627,6 +553,5 @@ contract ProtocolGovernor is
     {
         return super.proposalNeedsQueuing(proposalId);
     }
-
 }
 

@@ -3,11 +3,11 @@ pragma solidity ^0.8.24;
 
 import {Test, console2} from "forge-std/Test.sol";
 
-import {GovernanceToken}  from "../src/GovernanceToken.sol";
+import {GovernanceToken} from "../src/GovernanceToken.sol";
 import {ProtocolTimelock} from "../src/ProtocolTimelock.sol";
 import {ProtocolGovernor} from "../src/ProtocolGovernor.sol";
 
-import {IGovernor}        from "@openzeppelin/contracts/governance/IGovernor.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,7 +22,9 @@ contract MockTarget {
 
     error MockTarget__Unauthorized();
 
-    constructor(address timelock) { TIMELOCK = timelock; }
+    constructor(address timelock) {
+        TIMELOCK = timelock;
+    }
 
     function setParam(uint256 value) external {
         if (msg.sender != TIMELOCK) revert MockTarget__Unauthorized();
@@ -46,19 +48,18 @@ contract MockTarget {
 //   Timelock delay    : 2 days  (172 800 s)  — ProtocolTimelock.MIN_DELAY
 // ─────────────────────────────────────────────────────────────────────────────
 contract GovernanceLifecycleTest is Test {
-
     // ── Governance stack ────────────────────────────────────────────
-    GovernanceToken  internal token;
+    GovernanceToken internal token;
     ProtocolTimelock internal timelock;
     ProtocolGovernor internal governor;
-    MockTarget       internal target;
+    MockTarget internal target;
 
     // ── Actors ──────────────────────────────────────────────────────
-    address internal deployer  = makeAddr("deployer");
-    address internal alice     = makeAddr("alice");   // large holder – proposes & votes For
-    address internal bob       = makeAddr("bob");     // medium holder – votes For
-    address internal carol     = makeAddr("carol");   // small holder – votes Against in some tests
-    address internal stranger  = makeAddr("stranger"); // holds no tokens
+    address internal deployer = makeAddr("deployer");
+    address internal alice = makeAddr("alice"); // large holder – proposes & votes For
+    address internal bob = makeAddr("bob"); // medium holder – votes For
+    address internal carol = makeAddr("carol"); // small holder – votes Against in some tests
+    address internal stranger = makeAddr("stranger"); // holds no tokens
 
     // ── Token distribution ──────────────────────────────────────────
     // Total initial supply : 1 000 000 DGOV  (scaled by 1e18 in the constructor)
@@ -66,19 +67,19 @@ contract GovernanceLifecycleTest is Test {
     // bob    :  50 000 (5 %)    > 4 % quorum alone
     // carol  :   5 000 (0.5 %)  below 1 % threshold (cannot propose)
     // deployer: 845 000 (remainder) – self-delegated but does not vote in tests
-    uint256 internal constant INITIAL_SUPPLY  = 1_000_000; // whole tokens
-    uint256 internal constant ALICE_TOKENS    = 100_000e18;
-    uint256 internal constant BOB_TOKENS      =  50_000e18;
-    uint256 internal constant CAROL_TOKENS    =   5_000e18;
+    uint256 internal constant INITIAL_SUPPLY = 1_000_000; // whole tokens
+    uint256 internal constant ALICE_TOKENS = 100_000e18;
+    uint256 internal constant BOB_TOKENS = 50_000e18;
+    uint256 internal constant CAROL_TOKENS = 5_000e18;
 
     // ── Governance timing (mirrors contract constants) ───────────────
-    uint256 internal constant VOTING_DELAY   = 1 days;
-    uint256 internal constant VOTING_PERIOD  = 1 weeks;
+    uint256 internal constant VOTING_DELAY = 1 days;
+    uint256 internal constant VOTING_PERIOD = 1 weeks;
     uint256 internal constant TIMELOCK_DELAY = 2 days;
 
     // ── Vote support constants ───────────────────────────────────────
     uint8 internal constant AGAINST = 0;
-    uint8 internal constant FOR     = 1;
+    uint8 internal constant FOR = 1;
     uint8 internal constant ABSTAIN = 2;
 
     // ────────────────────────────────────────────────────────────────
@@ -103,7 +104,7 @@ contract GovernanceLifecycleTest is Test {
 
         // 4. Wire roles: grant PROPOSER_ROLE + CANCELLER_ROLE to the Governor.
         //    The Timelock will schedule / execute proposals only via the Governor.
-        timelock.grantRole(timelock.PROPOSER_ROLE(),  address(governor));
+        timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
         timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
 
         // 5. Renounce the deployer's TIMELOCK_ADMIN_ROLE.
@@ -120,19 +121,23 @@ contract GovernanceLifecycleTest is Test {
         target = new MockTarget(address(timelock));
 
         // 8. Distribute tokens.
-        token.transfer(alice,  ALICE_TOKENS);
-        token.transfer(bob,    BOB_TOKENS);
-        token.transfer(carol,  CAROL_TOKENS);
+        token.transfer(alice, ALICE_TOKENS);
+        token.transfer(bob, BOB_TOKENS);
+        token.transfer(carol, CAROL_TOKENS);
         // deployer retains the remainder (845 000 DGOV)
 
         vm.stopPrank();
 
         // 9. Self-delegate — activates ERC20Votes checkpointing for each holder.
         //    Must happen BEFORE any proposal snapshot is taken.
-        vm.prank(alice);   token.delegate(alice);
-        vm.prank(bob);     token.delegate(bob);
-        vm.prank(carol);   token.delegate(carol);
-        vm.prank(deployer); token.delegate(deployer);
+        vm.prank(alice);
+        token.delegate(alice);
+        vm.prank(bob);
+        token.delegate(bob);
+        vm.prank(carol);
+        token.delegate(carol);
+        vm.prank(deployer);
+        token.delegate(deployer);
 
         // 10. Advance 1 second so that delegation checkpoints are in the past.
         //     Governor.propose() reads getVotes(proposer, clock()-1), so the
@@ -146,17 +151,13 @@ contract GovernanceLifecycleTest is Test {
     function _buildProposal(address tgt, bytes memory data)
         internal
         pure
-        returns (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        )
+        returns (address[] memory targets, uint256[] memory values, bytes[] memory calldatas)
     {
-        targets    = new address[](1);
-        values     = new uint256[](1);
-        calldatas  = new bytes[](1);
-        targets[0]   = tgt;
-        values[0]    = 0;
+        targets = new address[](1);
+        values = new uint256[](1);
+        calldatas = new bytes[](1);
+        targets[0] = tgt;
+        values[0] = 0;
         calldatas[0] = data;
     }
 
@@ -168,8 +169,8 @@ contract GovernanceLifecycleTest is Test {
         address proposer,
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        string    memory description
+        bytes[] memory calldatas,
+        string memory description
     ) internal returns (uint256 proposalId) {
         // Propose
         vm.prank(proposer);
@@ -181,8 +182,10 @@ contract GovernanceLifecycleTest is Test {
         assertEq(uint8(governor.state(proposalId)), uint8(IGovernor.ProposalState.Active));
 
         // Alice and bob vote For (combined 150k = 15 % > 4 % quorum)
-        vm.prank(alice); governor.castVote(proposalId, FOR);
-        vm.prank(bob);   governor.castVote(proposalId, FOR);
+        vm.prank(alice);
+        governor.castVote(proposalId, FOR);
+        vm.prank(bob);
+        governor.castVote(proposalId, FOR);
 
         // Warp past voting period → Succeeded
         vm.warp(block.timestamp + VOTING_PERIOD + 1);
@@ -210,14 +213,8 @@ contract GovernanceLifecycleTest is Test {
     function test_FullGovernanceLifecycle_ParameterChange() public {
         string memory description = "Proposal #1: Set MockTarget.param to 999";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(
-            address(target),
-            abi.encodeCall(MockTarget.setParam, (999))
-        );
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (999)));
 
         assertEq(target.param(), 0, "param should start at 0");
 
@@ -243,24 +240,16 @@ contract GovernanceLifecycleTest is Test {
 
         string memory description = "Proposal #2: Mint 42 000 DGOV to protocol reserve";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(
-            address(token),
-            abi.encodeCall(GovernanceToken.mint, (recipient, mintAmount))
-        );
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(token), abi.encodeCall(GovernanceToken.mint, (recipient, mintAmount)));
 
-        uint256 supplyBefore  = token.totalSupply();
+        uint256 supplyBefore = token.totalSupply();
         uint256 balanceBefore = token.balanceOf(recipient);
 
         _runFullLifecycle(alice, targets, values, calldatas, description);
 
-        assertEq(token.balanceOf(recipient), balanceBefore + mintAmount,
-            "recipient should have received minted tokens");
-        assertEq(token.totalSupply(), supplyBefore + mintAmount,
-            "total supply must increase by minted amount");
+        assertEq(token.balanceOf(recipient), balanceBefore + mintAmount, "recipient should have received minted tokens");
+        assertEq(token.totalSupply(), supplyBefore + mintAmount, "total supply must increase by minted amount");
 
         console2.log("[MINT] total supply after:", token.totalSupply());
         console2.log("[MINT] recipient balance after:", token.balanceOf(recipient));
@@ -275,11 +264,8 @@ contract GovernanceLifecycleTest is Test {
     function test_ProposalDefeated_QuorumNotReached() public {
         string memory description = "Proposal #3: Quorum failure test";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (1)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (1)));
 
         // Alice proposes (10 % > threshold)
         vm.prank(alice);
@@ -314,19 +300,18 @@ contract GovernanceLifecycleTest is Test {
     function test_ProposalDefeated_MajorityAgainst() public {
         string memory description = "Proposal #4: Majority against test";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (2)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (2)));
 
         vm.prank(alice);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         vm.warp(block.timestamp + VOTING_DELAY + 1);
 
-        vm.prank(alice);   governor.castVote(proposalId, FOR);     // 100k For
-        vm.prank(deployer); governor.castVote(proposalId, AGAINST); // 845k Against
+        vm.prank(alice); // 100k For
+        governor.castVote(proposalId, FOR);
+        vm.prank(deployer); // 845k Against
+        governor.castVote(proposalId, AGAINST);
 
         vm.warp(block.timestamp + VOTING_PERIOD + 1);
 
@@ -344,15 +329,12 @@ contract GovernanceLifecycleTest is Test {
     ///         The dynamic threshold is totalSupply / 100 = 10 000 DGOV.
     ///         carol.votingPower (5 000) < threshold (10 000) → revert.
     function test_ProposalThreshold_BelowThresholdReverts() public {
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (3)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (3)));
 
         // GovernorInsufficientProposerVotes is a custom error in the Governor base
         vm.prank(carol);
-        vm.expectRevert();  // any revert is sufficient; exact selector is an OZ internal
+        vm.expectRevert(); // any revert is sufficient; exact selector is an OZ internal
         governor.propose(targets, values, calldatas, "Carol low-power proposal");
     }
 
@@ -365,11 +347,8 @@ contract GovernanceLifecycleTest is Test {
     function test_CannotVote_BeforeVotingDelay() public {
         string memory description = "Proposal #6: Early vote test";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (4)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (4)));
 
         vm.prank(alice);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
@@ -391,19 +370,18 @@ contract GovernanceLifecycleTest is Test {
     function test_CannotExecute_BeforeTimelockDelay() public {
         string memory description = "Proposal #7: Premature execute test";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (5)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (5)));
 
         vm.prank(alice);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         vm.warp(block.timestamp + VOTING_DELAY + 1);
 
-        vm.prank(alice); governor.castVote(proposalId, FOR);
-        vm.prank(bob);   governor.castVote(proposalId, FOR);
+        vm.prank(alice);
+        governor.castVote(proposalId, FOR);
+        vm.prank(bob);
+        governor.castVote(proposalId, FOR);
 
         vm.warp(block.timestamp + VOTING_PERIOD + 1);
 
@@ -428,11 +406,8 @@ contract GovernanceLifecycleTest is Test {
     function test_ProposerCanCancel_PendingProposal() public {
         string memory description = "Proposal #8: Cancellation test";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (6)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (6)));
 
         vm.prank(alice);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
@@ -457,11 +432,8 @@ contract GovernanceLifecycleTest is Test {
     function test_CannotCancel_OtherAccountsProposal() public {
         string memory description = "Proposal #9: Cancel authorization test";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (7)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (7)));
 
         // Alice proposes
         vm.prank(alice);
@@ -482,19 +454,18 @@ contract GovernanceLifecycleTest is Test {
     function test_TimelockDelay_ExactBoundary() public {
         string memory description = "Proposal #10: Exact timelock boundary test";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (100)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (100)));
 
         vm.prank(alice);
         governor.propose(targets, values, calldatas, description);
 
         vm.warp(block.timestamp + VOTING_DELAY + 1);
 
-        vm.prank(alice); governor.castVote(_hashProposal(targets, values, calldatas, description), FOR);
-        vm.prank(bob);   governor.castVote(_hashProposal(targets, values, calldatas, description), FOR);
+        vm.prank(alice);
+        governor.castVote(_hashProposal(targets, values, calldatas, description), FOR);
+        vm.prank(bob);
+        governor.castVote(_hashProposal(targets, values, calldatas, description), FOR);
 
         vm.warp(block.timestamp + VOTING_PERIOD + 1);
 
@@ -524,26 +495,22 @@ contract GovernanceLifecycleTest is Test {
     function test_QuorumIsComputedAtSnapshot() public {
         string memory description = "Proposal #11: Quorum snapshot test";
 
-        (
-            address[] memory targets,
-            uint256[] memory values,
-            bytes[]   memory calldatas
-        ) = _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (8)));
+        (address[] memory targets, uint256[] memory values, bytes[] memory calldatas) =
+            _buildProposal(address(target), abi.encodeCall(MockTarget.setParam, (8)));
 
         vm.prank(alice);
         uint256 propId = governor.propose(targets, values, calldatas, description);
 
-        uint256 snapshot  = governor.proposalSnapshot(propId);
-        uint256 totalSup  = token.totalSupply(); // 1 000 000e18 at snapshot time
+        uint256 snapshot = governor.proposalSnapshot(propId);
+        uint256 totalSup = token.totalSupply(); // 1 000 000e18 at snapshot time
 
         // Warp to snapshot + 1 (so query is in the past)
         vm.warp(snapshot + 1);
 
         uint256 quorumAtSnapshot = governor.quorum(snapshot);
-        uint256 expectedQuorum   = totalSup * 4 / 100; // 40 000e18
+        uint256 expectedQuorum = totalSup * 4 / 100; // 40 000e18
 
-        assertEq(quorumAtSnapshot, expectedQuorum,
-            "quorum must be exactly 4 % of totalSupply at snapshot");
+        assertEq(quorumAtSnapshot, expectedQuorum, "quorum must be exactly 4 % of totalSupply at snapshot");
 
         console2.log("[QUORUM] totalSupply at snapshot:", totalSup);
         console2.log("[QUORUM] required quorum (4 %):", quorumAtSnapshot);
@@ -553,17 +520,17 @@ contract GovernanceLifecycleTest is Test {
     // TEST 12 — Governor constants match spec values exactly
     // ════════════════════════════════════════════════════════════════
     function test_GovernorConstants_MatchSpec() public view {
-        assertEq(governor.votingDelay(),  1 days,  "voting delay must be 1 day");
+        assertEq(governor.votingDelay(), 1 days, "voting delay must be 1 day");
         assertEq(governor.votingPeriod(), 1 weeks, "voting period must be 1 week");
-        assertEq(governor.quorumNumerator(), 4,    "quorum numerator must be 4 (= 4 %)");
-        assertEq(timelock.getMinDelay(), 2 days,   "timelock min delay must be 2 days");
+        assertEq(governor.quorumNumerator(), 4, "quorum numerator must be 4 (= 4 %)");
+        assertEq(timelock.getMinDelay(), 2 days, "timelock min delay must be 2 days");
     }
 
     // ════════════════════════════════════════════════════════════════
     // TEST 13 — Proposal threshold is 1 % of total supply (dynamic)
     // ════════════════════════════════════════════════════════════════
     function test_ProposalThreshold_Is1PctOfSupply() public view {
-        uint256 supply    = token.totalSupply();   // 1 000 000e18
+        uint256 supply = token.totalSupply(); // 1 000 000e18
         uint256 threshold = governor.proposalThreshold();
         assertEq(threshold, supply / 100, "threshold must be 1 % of total supply");
         // Alice (100 000e18) > threshold (10 000e18) ✓
@@ -576,7 +543,7 @@ contract GovernanceLifecycleTest is Test {
     // TEST 14 — Clock mode is timestamp (EIP-6372 alignment check)
     // ════════════════════════════════════════════════════════════════
     function test_ClockMode_IsTimestamp() public view {
-        assertEq(token.CLOCK_MODE(),    "mode=timestamp", "token clock must be timestamp");
+        assertEq(token.CLOCK_MODE(), "mode=timestamp", "token clock must be timestamp");
         assertEq(governor.CLOCK_MODE(), "mode=timestamp", "governor clock must be timestamp");
     }
 
@@ -585,7 +552,7 @@ contract GovernanceLifecycleTest is Test {
     // ════════════════════════════════════════════════════════════════
     function test_TimelockRoles_CorrectlyWired() public view {
         // Governor has PROPOSER_ROLE and CANCELLER_ROLE
-        assertTrue(timelock.hasRole(timelock.PROPOSER_ROLE(),  address(governor)));
+        assertTrue(timelock.hasRole(timelock.PROPOSER_ROLE(), address(governor)));
         assertTrue(timelock.hasRole(timelock.CANCELLER_ROLE(), address(governor)));
 
         // address(0) has EXECUTOR_ROLE (open execution)
@@ -604,8 +571,8 @@ contract GovernanceLifecycleTest is Test {
     function _hashProposal(
         address[] memory targets,
         uint256[] memory values,
-        bytes[]   memory calldatas,
-        string    memory description
+        bytes[] memory calldatas,
+        string memory description
     ) internal pure returns (uint256) {
         return uint256(keccak256(abi.encode(targets, values, calldatas, keccak256(bytes(description)))));
     }

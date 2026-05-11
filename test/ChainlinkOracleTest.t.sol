@@ -2,19 +2,22 @@
 pragma solidity ^0.8.24;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {ERC20}          from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {ChainlinkPriceFeedAdapter} from "../src/ChainlinkPriceFeedAdapter.sol";
-import {ERC4626Vault}              from "../src/ERC4626Vault.sol";
-import {ConstantProductAMM}        from "../src/AMM.sol";
-import {MockV3Aggregator}          from "./mocks/MockV3Aggregator.sol";
+import {ERC4626Vault} from "../src/ERC4626Vault.sol";
+import {ConstantProductAMM} from "../src/AMM.sol";
+import {MockV3Aggregator} from "./mocks/MockV3Aggregator.sol";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Minimal ERC-20 for integration tests
 // ─────────────────────────────────────────────────────────────────────────────
 contract MockERC20Oracle is ERC20 {
     constructor(string memory name_, string memory sym_) ERC20(name_, sym_) {}
-    function mint(address to, uint256 amount) external { _mint(to, amount); }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,10 +38,9 @@ contract MockERC20Oracle is ERC20 {
 //   [4] age > heartbeat           → PriceFeed__StalePrice
 // ─────────────────────────────────────────────────────────────────────────────
 contract ChainlinkOracleTest is Test {
-
     // ── Actors ───────────────────────────────────────────────────────
-    address internal constant OWNER   = address(0xBE01);
-    address internal constant ALICE   = address(0xBE02);
+    address internal constant OWNER = address(0xBE01);
+    address internal constant ALICE = address(0xBE02);
     address internal constant ATTACKER = address(0xDEAD);
 
     // ── Heartbeat used for all single-feed unit tests ─────────────────
@@ -46,13 +48,13 @@ contract ChainlinkOracleTest is Test {
 
     // ── Typical Chainlink values ──────────────────────────────────────
     // USD feeds use 8 decimals; e.g. ETH/USD at $2000 = 200000000000
-    int256  internal constant ETH_USD_PRICE_8DEC  = 2_000e8;   // $2 000.00
-    int256  internal constant BTC_USD_PRICE_8DEC  = 60_000e8;  // $60 000.00
+    int256 internal constant ETH_USD_PRICE_8DEC = 2_000e8; // $2 000.00
+    int256 internal constant BTC_USD_PRICE_8DEC = 60_000e8; // $60 000.00
 
     // ── Contracts ─────────────────────────────────────────────────────
     ChainlinkPriceFeedAdapter internal adapter;
-    MockV3Aggregator          internal ethFeed;
-    MockV3Aggregator          internal btcFeed;
+    MockV3Aggregator internal ethFeed;
+    MockV3Aggregator internal btcFeed;
 
     // ─────────────────────────────────────────────────────────────────
     // setUp
@@ -104,10 +106,7 @@ contract ChainlinkOracleTest is Test {
     function test_RegisterFeed_Reverts_Duplicate() public {
         vm.prank(OWNER);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__AlreadyRegistered.selector,
-                address(ethFeed)
-            )
+            abi.encodeWithSelector(ChainlinkPriceFeedAdapter.PriceFeed__AlreadyRegistered.selector, address(ethFeed))
         );
         adapter.registerFeed(address(ethFeed), HEARTBEAT);
     }
@@ -135,9 +134,7 @@ contract ChainlinkOracleTest is Test {
     function test_UpdateHeartbeat_Reverts_NotRegistered() public {
         address ghost = makeAddr("ghost");
         vm.prank(OWNER);
-        vm.expectRevert(
-            abi.encodeWithSelector(ChainlinkPriceFeedAdapter.PriceFeed__NotRegistered.selector, ghost)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ChainlinkPriceFeedAdapter.PriceFeed__NotRegistered.selector, ghost));
         adapter.updateHeartbeat(ghost, HEARTBEAT);
     }
 
@@ -150,17 +147,13 @@ contract ChainlinkOracleTest is Test {
     function test_DeregisterFeed_Reverts_NotRegistered() public {
         address ghost = makeAddr("ghost");
         vm.prank(OWNER);
-        vm.expectRevert(
-            abi.encodeWithSelector(ChainlinkPriceFeedAdapter.PriceFeed__NotRegistered.selector, ghost)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ChainlinkPriceFeedAdapter.PriceFeed__NotRegistered.selector, ghost));
         adapter.deregisterFeed(ghost);
     }
 
     function test_GetPrice_Reverts_UnregisteredFeed() public {
         address ghost = makeAddr("ghost");
-        vm.expectRevert(
-            abi.encodeWithSelector(ChainlinkPriceFeedAdapter.PriceFeed__NotRegistered.selector, ghost)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ChainlinkPriceFeedAdapter.PriceFeed__NotRegistered.selector, ghost));
         adapter.getPrice(ghost);
     }
 
@@ -173,8 +166,7 @@ contract ChainlinkOracleTest is Test {
     function test_GetPrice_Valid_8DecimalFeed() public view {
         uint256 price = adapter.getPrice(address(ethFeed));
         // 2_000e8 * 10^10 = 2_000e18
-        assertEq(price, uint256(ETH_USD_PRICE_8DEC) * 1e10,
-            "8-decimal feed must be scaled to 18 decimals");
+        assertEq(price, uint256(ETH_USD_PRICE_8DEC) * 1e10, "8-decimal feed must be scaled to 18 decimals");
     }
 
     /// @notice 18-decimal feed → no scaling, price returned as-is.
@@ -216,9 +208,7 @@ contract ChainlinkOracleTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__InvalidPrice.selector,
-                address(ethFeed),
-                int256(0)
+                ChainlinkPriceFeedAdapter.PriceFeed__InvalidPrice.selector, address(ethFeed), int256(0)
             )
         );
         adapter.getPrice(address(ethFeed));
@@ -230,9 +220,7 @@ contract ChainlinkOracleTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__InvalidPrice.selector,
-                address(ethFeed),
-                badAnswer
+                ChainlinkPriceFeedAdapter.PriceFeed__InvalidPrice.selector, address(ethFeed), badAnswer
             )
         );
         adapter.getPrice(address(ethFeed));
@@ -243,9 +231,7 @@ contract ChainlinkOracleTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__InvalidPrice.selector,
-                address(ethFeed),
-                type(int256).min
+                ChainlinkPriceFeedAdapter.PriceFeed__InvalidPrice.selector, address(ethFeed), type(int256).min
             )
         );
         adapter.getPrice(address(ethFeed));
@@ -275,7 +261,7 @@ contract ChainlinkOracleTest is Test {
     ///         matches the exact value the adapter sees, regardless of warp timing.
     function test_GetPrice_Reverts_PastHeartbeat() public {
         // Read the feed's actual updatedAt before warping.
-        (,,,uint256 feedUpdatedAt,) = ethFeed.latestRoundData();
+        (,,, uint256 feedUpdatedAt,) = ethFeed.latestRoundData();
 
         vm.warp(block.timestamp + HEARTBEAT + 1);
 
@@ -283,7 +269,7 @@ contract ChainlinkOracleTest is Test {
             abi.encodeWithSelector(
                 ChainlinkPriceFeedAdapter.PriceFeed__StalePrice.selector,
                 address(ethFeed),
-                feedUpdatedAt,   // what latestRoundData() returns as updatedAt
+                feedUpdatedAt, // what latestRoundData() returns as updatedAt
                 block.timestamp, // current time after warp
                 HEARTBEAT
             )
@@ -293,7 +279,7 @@ contract ChainlinkOracleTest is Test {
 
     /// @notice Far-future warp — very stale price must revert.
     function test_GetPrice_Reverts_VeryStalePrice() public {
-        (,,,uint256 feedUpdatedAt,) = ethFeed.latestRoundData();
+        (,,, uint256 feedUpdatedAt,) = ethFeed.latestRoundData();
 
         vm.warp(block.timestamp + 7 days);
 
@@ -332,8 +318,7 @@ contract ChainlinkOracleTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__InvalidRoundTimestamp.selector,
-                address(ethFeed)
+                ChainlinkPriceFeedAdapter.PriceFeed__InvalidRoundTimestamp.selector, address(ethFeed)
             )
         );
         adapter.getPrice(address(ethFeed));
@@ -351,10 +336,7 @@ contract ChainlinkOracleTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__RoundNotComplete.selector,
-                address(ethFeed),
-                uint80(10),
-                uint80(9)
+                ChainlinkPriceFeedAdapter.PriceFeed__RoundNotComplete.selector, address(ethFeed), uint80(10), uint80(9)
             )
         );
         adapter.getPrice(address(ethFeed));
@@ -380,8 +362,7 @@ contract ChainlinkOracleTest is Test {
         ethFeed.updateAnswer(int256(uint256(rawPrice)));
 
         uint256 normalised = adapter.getPrice(address(ethFeed));
-        assertEq(normalised, uint256(rawPrice) * 1e10,
-            "normalised must be rawPrice * 10^(18-8)");
+        assertEq(normalised, uint256(rawPrice) * 1e10, "normalised must be rawPrice * 10^(18-8)");
     }
 
     /// @notice For any valid 18-decimal price, the normalised result must equal rawPrice.
@@ -409,7 +390,7 @@ contract ChainlinkOracleTest is Test {
 
         // Read the feed's updatedAt before warping so the expected error
         // uses the exact value the adapter will put in the revert.
-        (,,,uint256 feedUpdatedAt,) = ethFeed.latestRoundData();
+        (,,, uint256 feedUpdatedAt,) = ethFeed.latestRoundData();
 
         vm.warp(block.timestamp + age);
 
@@ -461,9 +442,9 @@ contract ChainlinkOracleTest is Test {
 
         // ── Deploy vault wired to adapter ─────────────────────────────
         ERC4626Vault vault = new ERC4626Vault(
-            address(amm),      // lpToken = asset
-            address(amm),      // amm
-            address(adapter),  // Chainlink adapter
+            address(amm), // lpToken = asset
+            address(amm), // amm
+            address(adapter), // Chainlink adapter
             OWNER
         );
 
@@ -473,8 +454,8 @@ contract ChainlinkOracleTest is Test {
         address t1 = address(amm.token1());
 
         // $1.00 per TKA, $2.00 per TKB — both 8-decimal feeds
-        MockV3Aggregator feedA = new MockV3Aggregator(8, 1e8);  // $1
-        MockV3Aggregator feedB = new MockV3Aggregator(8, 2e8);  // $2
+        MockV3Aggregator feedA = new MockV3Aggregator(8, 1e8); // $1
+        MockV3Aggregator feedB = new MockV3Aggregator(8, 2e8); // $2
 
         // Register both feeds
         adapter.registerFeed(address(feedA), HEARTBEAT);
@@ -591,8 +572,7 @@ contract ChainlinkOracleTest is Test {
         ethFeed.updateRoundData(20, ETH_USD_PRICE_8DEC, block.timestamp, block.timestamp, 19);
         vm.expectRevert(
             abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__RoundNotComplete.selector,
-                address(ethFeed), uint80(20), uint80(19)
+                ChainlinkPriceFeedAdapter.PriceFeed__RoundNotComplete.selector, address(ethFeed), uint80(20), uint80(19)
             )
         );
         adapter.getPrice(address(ethFeed));
@@ -601,8 +581,7 @@ contract ChainlinkOracleTest is Test {
         ethFeed.updateRoundData(21, 0, block.timestamp, block.timestamp, 21);
         vm.expectRevert(
             abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__InvalidPrice.selector,
-                address(ethFeed), int256(0)
+                ChainlinkPriceFeedAdapter.PriceFeed__InvalidPrice.selector, address(ethFeed), int256(0)
             )
         );
         adapter.getPrice(address(ethFeed));
@@ -611,8 +590,7 @@ contract ChainlinkOracleTest is Test {
         ethFeed.updateRoundData(22, ETH_USD_PRICE_8DEC, block.timestamp, 0, 22);
         vm.expectRevert(
             abi.encodeWithSelector(
-                ChainlinkPriceFeedAdapter.PriceFeed__InvalidRoundTimestamp.selector,
-                address(ethFeed)
+                ChainlinkPriceFeedAdapter.PriceFeed__InvalidRoundTimestamp.selector, address(ethFeed)
             )
         );
         adapter.getPrice(address(ethFeed));
@@ -623,7 +601,10 @@ contract ChainlinkOracleTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ChainlinkPriceFeedAdapter.PriceFeed__StalePrice.selector,
-                address(ethFeed), staleAt, block.timestamp, HEARTBEAT
+                address(ethFeed),
+                staleAt,
+                block.timestamp,
+                HEARTBEAT
             )
         );
         adapter.getPrice(address(ethFeed));

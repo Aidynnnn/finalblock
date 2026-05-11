@@ -21,7 +21,6 @@ import {ERC4626VaultV1} from "./ERC4626VaultV1.sol";
 ///         `implementation` address; each proxy stores its own independent
 ///         state in its own storage.
 contract VaultFactory {
-
     // ────────────────────────────────────────────────────────────────
     // Storage
     // ────────────────────────────────────────────────────────────────
@@ -53,20 +52,13 @@ contract VaultFactory {
     /// @param lpToken        Vault's underlying LP token.
     /// @param vaultOwner     Initial owner written into the vault's storage.
     event VaultDeployed(
-        address indexed proxy,
-        address indexed implementation,
-        address indexed lpToken,
-        address vaultOwner
+        address indexed proxy, address indexed implementation, address indexed lpToken, address vaultOwner
     );
 
     /// @param proxy Deterministically deployed proxy address.
     /// @param salt  The user-supplied bytes32 salt.
     event VaultDeployedDeterministic(
-        address indexed proxy,
-        bytes32 indexed salt,
-        address indexed implementation,
-        address lpToken,
-        address vaultOwner
+        address indexed proxy, bytes32 indexed salt, address indexed implementation, address lpToken, address vaultOwner
     );
 
     event ImplementationUpdated(address indexed oldImpl, address indexed newImpl);
@@ -107,13 +99,11 @@ contract VaultFactory {
     /// @param adapter      Chainlink adapter (address(0) = configure later).
     /// @param vaultOwner   Address that becomes the vault's initial owner.
     /// @return proxy       Address of the deployed ERC1967Proxy.
-    function deployVault(
-        address lpToken,
-        address ammAddress,
-        address adapter,
-        address vaultOwner
-    ) external returns (address proxy) {
-        if (lpToken    == address(0)) revert Factory__ZeroAddress();
+    function deployVault(address lpToken, address ammAddress, address adapter, address vaultOwner)
+        external
+        returns (address proxy)
+    {
+        if (lpToken == address(0)) revert Factory__ZeroAddress();
         if (ammAddress == address(0)) revert Factory__ZeroAddress();
         if (vaultOwner == address(0)) revert Factory__ZeroAddress();
 
@@ -151,7 +141,7 @@ contract VaultFactory {
         address adapter,
         address vaultOwner
     ) external returns (address proxy) {
-        if (lpToken    == address(0)) revert Factory__ZeroAddress();
+        if (lpToken == address(0)) revert Factory__ZeroAddress();
         if (ammAddress == address(0)) revert Factory__ZeroAddress();
         if (vaultOwner == address(0)) revert Factory__ZeroAddress();
 
@@ -188,22 +178,16 @@ contract VaultFactory {
     /// @param adapter    Must match the adapter supplied at deployment.
     /// @param vaultOwner Must match the vaultOwner supplied at deployment.
     /// @return predicted The address where the proxy will be deployed.
-    function predictVaultAddress(
-        bytes32 salt,
-        address lpToken,
-        address ammAddress,
-        address adapter,
-        address vaultOwner
-    ) external view returns (address predicted) {
+    function predictVaultAddress(bytes32 salt, address lpToken, address ammAddress, address adapter, address vaultOwner)
+        external
+        view
+        returns (address predicted)
+    {
         bytes memory initData = _encodeInitCall(lpToken, ammAddress, adapter, vaultOwner);
-        bytes32 bytecodeHash  = keccak256(_proxyBytecode(implementation, initData));
+        bytes32 bytecodeHash = keccak256(_proxyBytecode(implementation, initData));
 
-        predicted = address(uint160(uint256(keccak256(abi.encodePacked(
-            bytes1(0xff),
-            address(this),
-            salt,
-            bytecodeHash
-        )))));
+        predicted =
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, bytecodeHash)))));
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -250,28 +234,18 @@ contract VaultFactory {
     // ════════════════════════════════════════════════════════════════
 
     /// @dev ABI-encodes the `initialize(...)` call data passed to the proxy.
-    function _encodeInitCall(
-        address lpToken,
-        address ammAddress,
-        address adapter,
-        address vaultOwner
-    ) internal pure returns (bytes memory) {
-        return abi.encodeCall(
-            ERC4626VaultV1.initialize,
-            (lpToken, ammAddress, adapter, vaultOwner)
-        );
+    function _encodeInitCall(address lpToken, address ammAddress, address adapter, address vaultOwner)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodeCall(ERC4626VaultV1.initialize, (lpToken, ammAddress, adapter, vaultOwner));
     }
 
     /// @dev Returns the full creation bytecode for an ERC1967Proxy instance.
     ///      Equivalent to `new ERC1967Proxy(impl, data)` but returned as bytes
     ///      so it can be hashed or fed to CREATE2.
-    function _proxyBytecode(
-        address impl,
-        bytes memory initData
-    ) internal pure returns (bytes memory) {
-        return abi.encodePacked(
-            type(ERC1967Proxy).creationCode,
-            abi.encode(impl, initData)
-        );
+    function _proxyBytecode(address impl, bytes memory initData) internal pure returns (bytes memory) {
+        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(impl, initData));
     }
 }

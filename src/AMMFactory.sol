@@ -83,20 +83,10 @@ contract AMMFactory is Ownable {
     // ────────────────────────────────────────────────────────────────
 
     /// @notice Emitted on every CREATE2 pair deployment.
-    event PairCreated(
-        address indexed token0,
-        address indexed token1,
-        address pair,
-        uint256 totalPairs
-    );
+    event PairCreated(address indexed token0, address indexed token1, address pair, uint256 totalPairs);
 
     /// @notice Emitted on every vanilla CREATE pair deployment.
-    event VanillaPairCreated(
-        address indexed token0,
-        address indexed token1,
-        address pair,
-        uint256 totalVanillaPairs
-    );
+    event VanillaPairCreated(address indexed token0, address indexed token1, address pair, uint256 totalVanillaPairs);
 
     /// @notice Emitted when the circuit breaker is toggled.
     event CreationPauseToggled(bool paused);
@@ -148,35 +138,18 @@ contract AMMFactory is Ownable {
     /// @param tokenA One of the two tokens (order-independent).
     /// @param tokenB The other token.
     /// @return pair  The address where the pair would/will live.
-    function computePairAddress(address tokenA, address tokenB)
-        external
-        view
-        returns (address pair)
-    {
+    function computePairAddress(address tokenA, address tokenB) external view returns (address pair) {
         if (tokenA == address(0) || tokenB == address(0)) revert Factory__ZeroAddress();
         if (tokenA == tokenB) revert Factory__IdenticalTokens();
 
         (address t0, address t1) = _sortTokens(tokenA, tokenB);
 
-        bytes32 salt       = _computeSalt(t0, t1);
+        bytes32 salt = _computeSalt(t0, t1);
         bytes32 initcodeHash = keccak256(_encodedCreationCode(t0, t1));
 
         // Standard CREATE2 address formula:
         //   address(keccak256(0xff ++ factory ++ salt ++ keccak256(initcode))[12:])
-        pair = address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            address(this),
-                            salt,
-                            initcodeHash
-                        )
-                    )
-                )
-            )
-        );
+        pair = address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, initcodeHash)))));
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -192,10 +165,7 @@ contract AMMFactory is Ownable {
     /// @param tokenA One of the two pool tokens.
     /// @param tokenB The other pool token.
     /// @return pair  The address of the newly deployed ConstantProductAMM.
-    function createPair(address tokenA, address tokenB)
-        external
-        returns (address pair)
-    {
+    function createPair(address tokenA, address tokenB) external returns (address pair) {
         // ── Checks ───────────────────────────────────────────────────
         if (creationPaused) revert Factory__CreationPaused();
         if (tokenA == address(0) || tokenB == address(0)) revert Factory__ZeroAddress();
@@ -209,7 +179,7 @@ contract AMMFactory is Ownable {
 
         // ── Effects ─────────────────────────────────────────────────
         bytes memory creationCode = _encodedCreationCode(token0, token1);
-        bytes32 salt              = _computeSalt(token0, token1);
+        bytes32 salt = _computeSalt(token0, token1);
 
         // Inline Yul assembly for CREATE2.
         // Using assembly allows us to pass an arbitrary salt, which the high-level
@@ -225,10 +195,10 @@ contract AMMFactory is Ownable {
         // add(creationCode, 0x20) skips the length to reach the raw bytecode start.
         assembly {
             pair := create2(
-                0,                             // value (ETH) sent with deployment = 0
-                add(creationCode, 0x20),       // pointer to raw bytecode
-                mload(creationCode),           // length of bytecode
-                salt                           // deterministic salt
+                0, // value (ETH) sent with deployment = 0
+                add(creationCode, 0x20), // pointer to raw bytecode
+                mload(creationCode), // length of bytecode
+                salt // deterministic salt
             )
         }
 
@@ -264,10 +234,7 @@ contract AMMFactory is Ownable {
     /// @param tokenA One of the two pool tokens.
     /// @param tokenB The other pool token.
     /// @return pair  The address of the newly deployed ConstantProductAMM.
-    function createPairVanilla(address tokenA, address tokenB)
-        external
-        returns (address pair)
-    {
+    function createPairVanilla(address tokenA, address tokenB) external returns (address pair) {
         // ── Checks ───────────────────────────────────────────────────
         if (creationPaused) revert Factory__CreationPaused();
         if (tokenA == address(0) || tokenB == address(0)) revert Factory__ZeroAddress();
@@ -282,9 +249,9 @@ contract AMMFactory is Ownable {
         // Identical memory conventions to the CREATE2 block above, minus the salt.
         assembly {
             pair := create(
-                0,                             // value (ETH) sent = 0
-                add(creationCode, 0x20),       // raw bytecode pointer
-                mload(creationCode)            // bytecode length
+                0, // value (ETH) sent = 0
+                add(creationCode, 0x20), // raw bytecode pointer
+                mload(creationCode) // bytecode length
             )
         }
 
@@ -316,22 +283,14 @@ contract AMMFactory is Ownable {
 
     /// @dev Sorts two token addresses in ascending order.
     ///      All callers must use sorted tokens before hashing or deploying.
-    function _sortTokens(address tokenA, address tokenB)
-        internal
-        pure
-        returns (address token0, address token1)
-    {
+    function _sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
     }
 
     /// @dev Computes the CREATE2 salt for a sorted token pair.
     ///      Using abi.encodePacked (not abi.encode) is safe here because both
     ///      values are fixed-size address types; there is no ambiguity in packing.
-    function _computeSalt(address token0, address token1)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function _computeSalt(address token0, address token1) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(token0, token1));
     }
 
@@ -344,14 +303,7 @@ contract AMMFactory is Ownable {
     ///
     ///      This helper is used by BOTH createPair (CREATE2) and computePairAddress
     ///      to guarantee that the predicted hash matches the actual deployment.
-    function _encodedCreationCode(address token0, address token1)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return abi.encodePacked(
-            type(ConstantProductAMM).creationCode,
-            abi.encode(token0, token1)
-        );
+    function _encodedCreationCode(address token0, address token1) internal pure returns (bytes memory) {
+        return abi.encodePacked(type(ConstantProductAMM).creationCode, abi.encode(token0, token1));
     }
 }

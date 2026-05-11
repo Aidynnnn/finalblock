@@ -14,13 +14,13 @@ import {ConstantProductAMM} from "../src/AMM.sol";
 contract MockERC20 is ERC20 {
     uint8 private immutable _dec;
 
-    constructor(string memory name_, string memory symbol_, uint8 decimals_)
-        ERC20(name_, symbol_)
-    {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) {
         _dec = decimals_;
     }
 
-    function decimals() public view override returns (uint8) { return _dec; }
+    function decimals() public view override returns (uint8) {
+        return _dec;
+    }
 
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
@@ -34,9 +34,9 @@ contract MockERC20 is ERC20 {
 /// @dev Shared state and helpers for every AMM test contract.
 abstract contract AMMTestBase is Test {
     // ── Actors ───────────────────────────────────────────────────────
-    address internal constant LP      = address(0xAA01);
-    address internal constant TRADER  = address(0xAA02);
-    address internal constant LP2     = address(0xAA03);
+    address internal constant LP = address(0xAA01);
+    address internal constant TRADER = address(0xAA02);
+    address internal constant LP2 = address(0xAA03);
 
     // ── Tokens (sorted so tokenA < tokenB ensures token0/token1 ordering) ──
     MockERC20 internal tokenA;
@@ -50,9 +50,9 @@ abstract contract AMMTestBase is Test {
     MockERC20 internal tok1; // amm.token1()
 
     // ── Seed amounts ────────────────────────────────────────────────
-    uint256 internal constant INITIAL_0   = 100_000e18;
-    uint256 internal constant INITIAL_1   = 200_000e18;  // 1:2 price ratio
-    uint256 internal constant TRADER_BAL  = 10_000e18;
+    uint256 internal constant INITIAL_0 = 100_000e18;
+    uint256 internal constant INITIAL_1 = 200_000e18; // 1:2 price ratio
+    uint256 internal constant TRADER_BAL = 10_000e18;
 
     function setUp() public virtual {
         // Deploy two tokens and sort them so test helpers know which is token0.
@@ -67,26 +67,27 @@ abstract contract AMMTestBase is Test {
         tok1 = MockERC20(address(amm.token1()));
 
         // Fund LP and TRADER.
-        tok0.mint(LP,     INITIAL_0 * 10);
-        tok1.mint(LP,     INITIAL_1 * 10);
-        tok0.mint(LP2,    INITIAL_0 * 10);
-        tok1.mint(LP2,    INITIAL_1 * 10);
+        tok0.mint(LP, INITIAL_0 * 10);
+        tok1.mint(LP, INITIAL_1 * 10);
+        tok0.mint(LP2, INITIAL_0 * 10);
+        tok1.mint(LP2, INITIAL_1 * 10);
         tok0.mint(TRADER, TRADER_BAL);
         tok1.mint(TRADER, TRADER_BAL);
     }
 
     // ─── Helper: approve + addLiquidity from `who` ───────────────────
-    function _addLiquidity(
-        address who,
-        uint256 amt0,
-        uint256 amt1
-    ) internal returns (uint256 a0, uint256 a1, uint256 lp) {
+    function _addLiquidity(address who, uint256 amt0, uint256 amt1)
+        internal
+        returns (uint256 a0, uint256 a1, uint256 lp)
+    {
         vm.startPrank(who);
         tok0.approve(address(amm), amt0);
         tok1.approve(address(amm), amt1);
         (a0, a1, lp) = amm.addLiquidity(
-            amt0, amt1,
-            0, 0,          // no slippage protection for setup helpers
+            amt0,
+            amt1,
+            0,
+            0, // no slippage protection for setup helpers
             who,
             block.timestamp + 1 hours
         );
@@ -99,30 +100,18 @@ abstract contract AMMTestBase is Test {
     }
 
     // ─── Helper: approve + swap ───────────────────────────────────────
-    function _swap(
-        address who,
-        address tokenIn,
-        uint256 amountIn,
-        uint256 minOut
-    ) internal returns (uint256 amountOut) {
+    function _swap(address who, address tokenIn, uint256 amountIn, uint256 minOut)
+        internal
+        returns (uint256 amountOut)
+    {
         vm.startPrank(who);
         MockERC20(tokenIn).approve(address(amm), amountIn);
-        amountOut = amm.swap(
-            tokenIn,
-            amountIn,
-            minOut,
-            who,
-            block.timestamp + 1 hours
-        );
+        amountOut = amm.swap(tokenIn, amountIn, minOut, who, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
     // ─── Helper: compute expected amountOut using the 0.3% formula ───
-    function _expectedOut(
-        uint256 amountIn,
-        uint256 rIn,
-        uint256 rOut
-    ) internal pure returns (uint256) {
+    function _expectedOut(uint256 amountIn, uint256 rIn, uint256 rOut) internal pure returns (uint256) {
         uint256 withFee = amountIn * 997;
         return (withFee * rOut) / (rIn * 1000 + withFee);
     }
@@ -138,15 +127,13 @@ abstract contract AMMTestBase is Test {
 // ═══════════════════════════════════════════════════════════════════
 
 contract AMM_Constructor_Test is AMMTestBase {
-
     function test_constructor_tokensAreSorted() public view {
         // token0 must have the lower address.
-        assertTrue(address(amm.token0()) < address(amm.token1()),
-            "token0 should be the lower-address token");
+        assertTrue(address(amm.token0()) < address(amm.token1()), "token0 should be the lower-address token");
     }
 
     function test_constructor_lpTokenMetadata() public view {
-        assertEq(amm.name(),   "DeFiApp LP Token");
+        assertEq(amm.name(), "DeFiApp LP Token");
         assertEq(amm.symbol(), "DLPT");
     }
 
@@ -177,7 +164,6 @@ contract AMM_Constructor_Test is AMMTestBase {
 // ═══════════════════════════════════════════════════════════════════
 
 contract AMM_AddLiquidity_Test is AMMTestBase {
-
     // ── Initial deposit ───────────────────────────────────────────────
 
     function test_addLiquidity_firstDeposit_mintsLpTokens() public {
@@ -228,15 +214,15 @@ contract AMM_AddLiquidity_Test is AMMTestBase {
         (uint256 a0, uint256 a1,) = _addLiquidity(LP2, INITIAL_0, INITIAL_1 * 2);
 
         // Both amounts should be consumed at the ratio exactly.
-        assertEq(a0, INITIAL_0,     "token0 deposit should equal desired");
-        assertEq(a1, INITIAL_1,     "token1 deposit should be proportional");
+        assertEq(a0, INITIAL_0, "token0 deposit should equal desired");
+        assertEq(a1, INITIAL_1, "token1 deposit should be proportional");
     }
 
     function test_addLiquidity_subsequentDeposit_lpSharesProportional() public {
         _seedPool();
         uint256 totalBefore = amm.totalSupply();
 
-        (, , uint256 lp2) = _addLiquidity(LP2, INITIAL_0, INITIAL_1);
+        (,, uint256 lp2) = _addLiquidity(LP2, INITIAL_0, INITIAL_1);
 
         // LP2's share should equal LP's share (same deposit in same ratio).
         // totalSupply includes minimum_liquidity, so LP2 share = lp2 / (totalBefore + lp2).
@@ -245,7 +231,7 @@ contract AMM_AddLiquidity_Test is AMMTestBase {
         assertApproxEqAbs(
             lp2 * 1e18 / totalAfter,
             (totalBefore - amm.MINIMUM_LIQUIDITY()) * 1e18 / totalAfter,
-            1e12,   // dust tolerance for integer rounding
+            1e12, // dust tolerance for integer rounding
             "LP shares should be proportional"
         );
     }
@@ -254,7 +240,7 @@ contract AMM_AddLiquidity_Test is AMMTestBase {
         _seedPool();
         // Provide excess token0 but constrained token1 — should use token1 as the scarce side.
         uint256 excessToken0 = INITIAL_0 * 3;
-        uint256 constrainedToken1 = INITIAL_1 / 2;  // only half the token1 required
+        uint256 constrainedToken1 = INITIAL_1 / 2; // only half the token1 required
 
         (uint256 a0, uint256 a1,) = _addLiquidity(LP2, excessToken0, constrainedToken1);
 
@@ -276,8 +262,8 @@ contract AMM_AddLiquidity_Test is AMMTestBase {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ConstantProductAMM.AMM__DeadlineExpired.selector,
-                999,        // deadline in the past
-                1000        // current timestamp
+                999, // deadline in the past
+                1000 // current timestamp
             )
         );
         vm.prank(LP);
@@ -324,8 +310,8 @@ contract AMM_AddLiquidity_Test is AMMTestBase {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ConstantProductAMM.AMM__SlippageExceeded.selector,
-                INITIAL_1,      // optimal amount1
-                tooHighMin1     // min required
+                INITIAL_1, // optimal amount1
+                tooHighMin1 // min required
             )
         );
         amm.addLiquidity(INITIAL_0, INITIAL_1 * 2, 0, tooHighMin1, LP2, block.timestamp + 1);
@@ -352,7 +338,6 @@ contract AMM_AddLiquidity_Test is AMMTestBase {
 // ═══════════════════════════════════════════════════════════════════
 
 contract AMM_RemoveLiquidity_Test is AMMTestBase {
-
     uint256 internal lpBalance;
 
     function setUp() public override {
@@ -365,12 +350,7 @@ contract AMM_RemoveLiquidity_Test is AMMTestBase {
         uint256 tok1Before = tok1.balanceOf(LP);
 
         vm.startPrank(LP);
-        (uint256 a0, uint256 a1) = amm.removeLiquidity(
-            lpBalance,
-            0, 0,
-            LP,
-            block.timestamp + 1
-        );
+        (uint256 a0, uint256 a1) = amm.removeLiquidity(lpBalance, 0, 0, LP, block.timestamp + 1);
         vm.stopPrank();
 
         assertGt(a0, 0, "should return token0");
@@ -385,8 +365,8 @@ contract AMM_RemoveLiquidity_Test is AMMTestBase {
         (uint256 r0, uint256 r1) = _reserves();
 
         uint256 halfLp = lpBalance / 2;
-        uint256 exp0   = (halfLp * r0) / totalLp;
-        uint256 exp1   = (halfLp * r1) / totalLp;
+        uint256 exp0 = (halfLp * r0) / totalLp;
+        uint256 exp1 = (halfLp * r1) / totalLp;
 
         vm.startPrank(LP);
         (uint256 a0, uint256 a1) = amm.removeLiquidity(halfLp, 0, 0, LP, block.timestamp + 1);
@@ -422,7 +402,7 @@ contract AMM_RemoveLiquidity_Test is AMMTestBase {
 
     function test_removeLiquidity_partialRemoval_lpRemainsProportional() public {
         uint256 totalBefore = amm.totalSupply();
-        uint256 thirdLp     = lpBalance / 3;
+        uint256 thirdLp = lpBalance / 3;
 
         vm.startPrank(LP);
         amm.removeLiquidity(thirdLp, 0, 0, LP, block.timestamp + 1);
@@ -438,13 +418,7 @@ contract AMM_RemoveLiquidity_Test is AMMTestBase {
     function test_removeLiquidity_revert_deadlineExpired() public {
         vm.warp(2000);
         vm.prank(LP);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ConstantProductAMM.AMM__DeadlineExpired.selector,
-                1999,
-                2000
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(ConstantProductAMM.AMM__DeadlineExpired.selector, 1999, 2000));
         amm.removeLiquidity(lpBalance, 0, 0, LP, 1999);
     }
 
@@ -472,7 +446,7 @@ contract AMM_RemoveLiquidity_Test is AMMTestBase {
     /// @dev REVERT PATH 11: slippage on token0 exceeded during removal
     function test_removeLiquidity_revert_slippageToken0() public {
         uint256 totalLp = amm.totalSupply();
-        (uint256 r0,)   = _reserves();
+        (uint256 r0,) = _reserves();
         uint256 expected0 = (lpBalance * r0) / totalLp;
 
         vm.prank(LP);
@@ -480,7 +454,7 @@ contract AMM_RemoveLiquidity_Test is AMMTestBase {
             abi.encodeWithSelector(
                 ConstantProductAMM.AMM__SlippageExceeded.selector,
                 expected0,
-                expected0 + 1   // min set 1 wei above received
+                expected0 + 1 // min set 1 wei above received
             )
         );
         amm.removeLiquidity(lpBalance, expected0 + 1, 0, LP, block.timestamp + 1);
@@ -492,7 +466,6 @@ contract AMM_RemoveLiquidity_Test is AMMTestBase {
 // ═══════════════════════════════════════════════════════════════════
 
 contract AMM_Swap_Unit_Test is AMMTestBase {
-
     function setUp() public override {
         super.setUp();
         _seedPool(); // INITIAL_0 : INITIAL_1 = 100k : 200k
@@ -526,7 +499,7 @@ contract AMM_Swap_Unit_Test is AMMTestBase {
         uint256 out = _swap(TRADER, address(tok0), amountIn, 0);
 
         assertEq(tok0.balanceOf(TRADER), traderTok0Before - amountIn, "trader tok0 should decrease");
-        assertEq(tok1.balanceOf(TRADER), traderTok1Before + out,      "trader tok1 should increase");
+        assertEq(tok1.balanceOf(TRADER), traderTok1Before + out, "trader tok1 should increase");
     }
 
     function test_swap_updatesReservesCorrectly() public {
@@ -536,7 +509,7 @@ contract AMM_Swap_Unit_Test is AMMTestBase {
 
         (uint256 r0After, uint256 r1After) = _reserves();
         assertEq(r0After, r0Before + amountIn, "reserve0 should increase by amountIn");
-        assertEq(r1After, r1Before - out,       "reserve1 should decrease by amountOut");
+        assertEq(r1After, r1Before - out, "reserve1 should decrease by amountOut");
     }
 
     function test_swap_kInvariantNonDecreasing() public {
@@ -580,7 +553,7 @@ contract AMM_Swap_Unit_Test is AMMTestBase {
         // Total value extracted (at original price ratio 1:2) should be >= deposited.
         // We compare in tok0-equivalent units: total = tok0 + tok1/2
         uint256 valueBefore = lpTok0Before + lpTok1Before / 2;
-        uint256 valueAfter  = lpTok0After  + lpTok1After  / 2;
+        uint256 valueAfter = lpTok0After + lpTok1After / 2;
         assertGe(valueAfter, valueBefore, "LP should accrue fees");
     }
 
@@ -599,8 +572,8 @@ contract AMM_Swap_Unit_Test is AMMTestBase {
 
     function test_swap_getAmountOut_matchesActualSwap() public {
         uint256 amountIn = 750e18;
-        uint256 quoted   = amm.getAmountOut(address(tok0), amountIn);
-        uint256 actual   = _swap(TRADER, address(tok0), amountIn, 0);
+        uint256 quoted = amm.getAmountOut(address(tok0), amountIn);
+        uint256 actual = _swap(TRADER, address(tok0), amountIn, 0);
         assertEq(quoted, actual, "getAmountOut preview should match swap result");
     }
 
@@ -617,26 +590,20 @@ contract AMM_Swap_Unit_Test is AMMTestBase {
     function test_swap_revert_invalidToken() public {
         address rogue = address(0xDEAD);
         vm.prank(TRADER);
-        vm.expectRevert(
-            abi.encodeWithSelector(ConstantProductAMM.AMM__InvalidToken.selector, rogue)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ConstantProductAMM.AMM__InvalidToken.selector, rogue));
         amm.swap(rogue, 1e18, 0, TRADER, block.timestamp + 1);
     }
 
     /// @dev REVERT PATH 14: slippage threshold not met
     function test_swap_revert_slippageExceeded() public {
-        uint256 amountIn   = 1_000e18;
+        uint256 amountIn = 1_000e18;
         (uint256 r0, uint256 r1) = _reserves();
         uint256 expectedOut = _expectedOut(amountIn, r0, r1);
 
         vm.startPrank(TRADER);
         tok0.approve(address(amm), amountIn);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                ConstantProductAMM.AMM__SlippageExceeded.selector,
-                expectedOut,
-                expectedOut + 1
-            )
+            abi.encodeWithSelector(ConstantProductAMM.AMM__SlippageExceeded.selector, expectedOut, expectedOut + 1)
         );
         amm.swap(address(tok0), amountIn, expectedOut + 1, TRADER, block.timestamp + 1);
         vm.stopPrank();
@@ -647,13 +614,7 @@ contract AMM_Swap_Unit_Test is AMMTestBase {
         vm.warp(5000);
         vm.startPrank(TRADER);
         tok0.approve(address(amm), 1e18);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ConstantProductAMM.AMM__DeadlineExpired.selector,
-                4999,
-                5000
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(ConstantProductAMM.AMM__DeadlineExpired.selector, 4999, 5000));
         amm.swap(address(tok0), 1e18, 0, TRADER, 4999);
         vm.stopPrank();
     }
@@ -684,7 +645,6 @@ contract AMM_Swap_Unit_Test is AMMTestBase {
 // ═══════════════════════════════════════════════════════════════════
 
 contract AMM_Swap_Fuzz_Test is AMMTestBase {
-
     function setUp() public override {
         super.setUp();
         // Seed a large pool so most fuzz inputs are valid.
@@ -716,7 +676,7 @@ contract AMM_Swap_Fuzz_Test is AMMTestBase {
         uint256 amountOut = amm.swap(
             address(tok0),
             amountIn,
-            0,           // no slippage floor — testing math, not UX
+            0, // no slippage floor — testing math, not UX
             TRADER,
             block.timestamp + 1
         );
@@ -744,13 +704,7 @@ contract AMM_Swap_Fuzz_Test is AMMTestBase {
 
         vm.startPrank(TRADER);
         tok1.approve(address(amm), amountIn);
-        uint256 amountOut = amm.swap(
-            address(tok1),
-            amountIn,
-            0,
-            TRADER,
-            block.timestamp + 1
-        );
+        uint256 amountOut = amm.swap(address(tok1), amountIn, 0, TRADER, block.timestamp + 1);
         vm.stopPrank();
 
         assertGt(amountOut, 0, "fuzz reverse: zero output");
@@ -784,7 +738,6 @@ contract AMM_Swap_Fuzz_Test is AMMTestBase {
 // ═══════════════════════════════════════════════════════════════════
 
 contract AMM_GetAmountOut_Test is AMMTestBase {
-
     function setUp() public override {
         super.setUp();
         _seedPool();
@@ -796,12 +749,7 @@ contract AMM_GetAmountOut_Test is AMMTestBase {
     }
 
     function test_getAmountOut_revert_invalidToken() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ConstantProductAMM.AMM__InvalidToken.selector,
-                address(0xBEEF)
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(ConstantProductAMM.AMM__InvalidToken.selector, address(0xBEEF)));
         amm.getAmountOut(address(0xBEEF), 1e18);
     }
 
@@ -809,7 +757,7 @@ contract AMM_GetAmountOut_Test is AMMTestBase {
         uint256 amountIn = 5_000e18;
         (uint256 r0, uint256 r1) = _reserves();
         uint256 expected = _expectedOut(amountIn, r0, r1);
-        uint256 actual   = amm.getAmountOut(address(tok0), amountIn);
+        uint256 actual = amm.getAmountOut(address(tok0), amountIn);
         assertEq(actual, expected);
     }
 }

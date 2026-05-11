@@ -86,7 +86,6 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
 ///
 /// @custom:security-contact security@yourprotocol.xyz
 contract ProtocolTimelock is TimelockController {
-
     // ─────────────────────────────────────────────────────────────────
     // Constants
     // ─────────────────────────────────────────────────────────────────
@@ -119,16 +118,12 @@ contract ProtocolTimelock is TimelockController {
     ///                   renounceRole(TIMELOCK_ADMIN_ROLE, deployer) as its final step.
     ///                   Pass address(0) to skip the temporary admin grant entirely
     ///                   (advanced use — requires all roles to be wired atomically).
-    constructor(
-        address[] memory proposers,
-        address[] memory executors,
-        address           admin
-    )
+    constructor(address[] memory proposers, address[] memory executors, address admin)
         TimelockController(
-            MIN_DELAY,   // minDelay — 2 days; the OZ constructor enforces delay >= minDelay
-            proposers,   // PROPOSER_ROLE + CANCELLER_ROLE recipients
-            executors,   // EXECUTOR_ROLE recipients; address(0) = open execution
-            admin        // temporary TIMELOCK_ADMIN_ROLE holder (deployer)
+            MIN_DELAY, // minDelay — 2 days; the OZ constructor enforces delay >= minDelay
+            proposers, // PROPOSER_ROLE + CANCELLER_ROLE recipients
+            executors, // EXECUTOR_ROLE recipients; address(0) = open execution
+            admin // temporary TIMELOCK_ADMIN_ROLE holder (deployer)
         )
     {
         // The OZ TimelockController constructor performs all initialisation:

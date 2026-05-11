@@ -28,13 +28,7 @@ interface IAggregatorV3 {
     function latestRoundData()
         external
         view
-        returns (
-            uint80  roundId,
-            int256  answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80  answeredInRound
-        );
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }
 
 /// @title  IPriceFeedAdapter
@@ -111,12 +105,7 @@ contract ChainlinkPriceFeedAdapter is IPriceFeedAdapter, Ownable {
     error PriceFeed__InvalidRoundTimestamp(address feed);
 
     /// @dev Price data is older than the registered heartbeat for this feed.
-    error PriceFeed__StalePrice(
-        address feed,
-        uint256 updatedAt,
-        uint256 currentTimestamp,
-        uint256 heartbeat
-    );
+    error PriceFeed__StalePrice(address feed, uint256 updatedAt, uint256 currentTimestamp, uint256 heartbeat);
 
     /// @dev A zero-address was supplied where one is not valid.
     error PriceFeed__ZeroAddress();
@@ -137,9 +126,9 @@ contract ChainlinkPriceFeedAdapter is IPriceFeedAdapter, Ownable {
         uint256 heartbeat;
         /// @notice Decimal count reported by the aggregator (cached at registration
         ///         to save a cold STATICCALL on every price read).
-        uint8   decimals;
+        uint8 decimals;
         /// @notice True once the feed has been registered.
-        bool    registered;
+        bool registered;
     }
 
     /// @dev Mapping from AggregatorV3 address to its configuration.
@@ -180,19 +169,15 @@ contract ChainlinkPriceFeedAdapter is IPriceFeedAdapter, Ownable {
     /// @param  heartbeat  Maximum acceptable age (seconds) for the price answer.
     function registerFeed(address feed, uint256 heartbeat) external onlyOwner {
         // ── Checks ──────────────────────────────────────────────────
-        if (feed == address(0))     revert PriceFeed__ZeroAddress();
-        if (heartbeat == 0)         revert PriceFeed__ZeroHeartbeat();
+        if (feed == address(0)) revert PriceFeed__ZeroAddress();
+        if (heartbeat == 0) revert PriceFeed__ZeroHeartbeat();
         if (_feedConfigs[feed].registered) revert PriceFeed__AlreadyRegistered(feed);
 
         // ── Effects ─────────────────────────────────────────────────
         // Cache decimals from the live feed to avoid a repeated external call later.
         uint8 feedDecimals = IAggregatorV3(feed).decimals();
 
-        _feedConfigs[feed] = FeedConfig({
-            heartbeat:  heartbeat,
-            decimals:   feedDecimals,
-            registered: true
-        });
+        _feedConfigs[feed] = FeedConfig({heartbeat: heartbeat, decimals: feedDecimals, registered: true});
 
         emit FeedRegistered(feed, heartbeat, feedDecimals);
     }
@@ -237,22 +222,12 @@ contract ChainlinkPriceFeedAdapter is IPriceFeedAdapter, Ownable {
     ///      Reverts on any validation failure — callers must handle the case
     ///      where this function reverts (e.g. the Vault should pause rather than
     ///      operate on a stale or invalid price).
-    function getPrice(address feed)
-        external
-        view
-        override
-        returns (uint256 price)
-    {
+    function getPrice(address feed) external view override returns (uint256 price) {
         price = _getValidatedPrice(feed);
     }
 
     /// @inheritdoc IPriceFeedAdapter
-    function getFeedDecimals(address feed)
-        external
-        view
-        override
-        returns (uint8)
-    {
+    function getFeedDecimals(address feed) external view override returns (uint8) {
         if (!_feedConfigs[feed].registered) revert PriceFeed__NotRegistered(feed);
         return _feedConfigs[feed].decimals;
     }
@@ -274,22 +249,17 @@ contract ChainlinkPriceFeedAdapter is IPriceFeedAdapter, Ownable {
 
     /// @dev Core validation and normalisation logic, extracted so it can be
     ///      reused without re-checking the registration flag from different entry points.
-    function _getValidatedPrice(address feed)
-        internal
-        view
-        returns (uint256 normalised)
-    {
+    function _getValidatedPrice(address feed) internal view returns (uint256 normalised) {
         // ── Check registration ───────────────────────────────────────
         FeedConfig memory cfg = _feedConfigs[feed];
         if (!cfg.registered) revert PriceFeed__NotRegistered(feed);
 
         // ── Fetch raw round data ─────────────────────────────────────
         (
-            uint80  roundId,
-            int256  answer,
-            ,                // startedAt — not used in our validation logic
+            uint80 roundId,
+            int256 answer,, // startedAt — not used in our validation logic
             uint256 updatedAt,
-            uint80  answeredInRound
+            uint80 answeredInRound
         ) = IAggregatorV3(feed).latestRoundData();
 
         // ── Safety check 1: round completeness ──────────────────────

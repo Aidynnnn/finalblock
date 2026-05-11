@@ -40,7 +40,6 @@ import {ERC4626VaultV1} from "./ERC4626VaultV1.sol";
 ///
 /// @custom:security-contact security@yourprotocol.xyz
 contract ERC4626VaultV2 is ERC4626VaultV1 {
-
     // ────────────────────────────────────────────────────────────────
     // Constants
     // ────────────────────────────────────────────────────────────────
@@ -61,9 +60,8 @@ contract ERC4626VaultV2 is ERC4626VaultV1 {
     ///      Slot = keccak256(abi.encode(uint256(keccak256("bcht2.storage.ERC4626VaultV2")) - 1))
     ///             & ~bytes32(uint256(0xff))
     function _getVaultV2Storage() private pure returns (VaultV2Storage storage $) {
-        bytes32 slot = keccak256(
-            abi.encode(uint256(keccak256("bcht2.storage.ERC4626VaultV2")) - 1)
-        ) & ~bytes32(uint256(0xff));
+        bytes32 slot =
+            keccak256(abi.encode(uint256(keccak256("bcht2.storage.ERC4626VaultV2")) - 1)) & ~bytes32(uint256(0xff));
         // solhint-disable-next-line no-inline-assembly
         assembly {
             $.slot := slot

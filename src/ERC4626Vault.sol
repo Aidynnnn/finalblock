@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IERC20}            from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata}    from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ERC20}             from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeERC20}         from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC4626}           from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {Math}              from "@openzeppelin/contracts/utils/math/Math.sol";
-import {ReentrancyGuard}   from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable}           from "@openzeppelin/contracts/access/Ownable.sol";
-import {Pausable}          from "@openzeppelin/contracts/utils/Pausable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IPriceFeedAdapter} from "./ChainlinkPriceFeedAdapter.sol";
 import {ConstantProductAMM} from "./AMM.sol";
@@ -153,12 +153,7 @@ contract ERC4626Vault is ERC4626, ReentrancyGuard, Ownable, Pausable {
     /// @param adapter         Address of the ChainlinkPriceFeedAdapter (may be address(0)
     ///                        initially; set later via setPriceFeedAdapter).
     /// @param initialOwner    Receives the Ownable role.
-    constructor(
-        address lpToken,
-        address ammAddress,
-        address adapter,
-        address initialOwner
-    )
+    constructor(address lpToken, address ammAddress, address adapter, address initialOwner)
         ERC4626(IERC20(lpToken))
         ERC20("DeFiApp Vault Share", "DVLT")
         Ownable(initialOwner)
@@ -203,7 +198,7 @@ contract ERC4626Vault is ERC4626, ReentrancyGuard, Ownable, Pausable {
         returns (uint256 shares)
     {
         // ── Checks ───────────────────────────────────────────────────
-        if (assets == 0)          revert Vault__ZeroAmount();
+        if (assets == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
 
         shares = previewDeposit(assets);
@@ -244,7 +239,7 @@ contract ERC4626Vault is ERC4626, ReentrancyGuard, Ownable, Pausable {
         returns (uint256 assets)
     {
         // ── Checks ───────────────────────────────────────────────────
-        if (shares == 0)            revert Vault__ZeroAmount();
+        if (shares == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
 
         assets = previewMint(shares);
@@ -281,7 +276,7 @@ contract ERC4626Vault is ERC4626, ReentrancyGuard, Ownable, Pausable {
         returns (uint256 shares)
     {
         // ── Checks ───────────────────────────────────────────────────
-        if (assets == 0)            revert Vault__ZeroAmount();
+        if (assets == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
 
         shares = previewWithdraw(assets);
@@ -317,7 +312,7 @@ contract ERC4626Vault is ERC4626, ReentrancyGuard, Ownable, Pausable {
         returns (uint256 assets)
     {
         // ── Checks ───────────────────────────────────────────────────
-        if (shares == 0)            revert Vault__ZeroAmount();
+        if (shares == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
 
         assets = previewRedeem(shares);
@@ -352,12 +347,7 @@ contract ERC4626Vault is ERC4626, ReentrancyGuard, Ownable, Pausable {
 
     /// @notice Returns the share token's decimals.
     ///         EIP-4626 recommends share decimals = asset decimals + offset.
-    function decimals()
-        public
-        view
-        override
-        returns (uint8)
-    {
+    function decimals() public view override returns (uint8) {
         // LP token decimals (18) + DECIMALS_OFFSET (6) = 24.
         // This is intentional and matches the offset used in share math.
         return IERC20Metadata(asset()).decimals() + DECIMALS_OFFSET;
@@ -385,11 +375,7 @@ contract ERC4626Vault is ERC4626, ReentrancyGuard, Ownable, Pausable {
     ///
     /// @param shares    Number of vault shares to value.
     /// @return usdValue USD value in WAD (1e18 = $1.00).
-    function getUsdValueOfShares(uint256 shares)
-        external
-        view
-        returns (uint256 usdValue)
-    {
+    function getUsdValueOfShares(uint256 shares) external view returns (uint256 usdValue) {
         if (address(priceFeedAdapter) == address(0)) revert Vault__FeedNotSet(address(0));
         if (token0Feed == address(0)) revert Vault__FeedNotSet(address(amm.token0()));
         if (token1Feed == address(0)) revert Vault__FeedNotSet(address(amm.token1()));
@@ -466,10 +452,7 @@ contract ERC4626Vault is ERC4626, ReentrancyGuard, Ownable, Pausable {
     ///      We intercept here to enforce the pause on the base implementation path
     ///      (the overridden public functions already check whenNotPaused; this catches
     ///      any direct super calls that might bypass the modifier in edge cases).
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares)
-        internal
-        override
-    {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         if (paused()) revert Vault__Paused();
         super._deposit(caller, receiver, assets, shares);
     }

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test, console2}     from "forge-std/Test.sol";
-import {StdInvariant}        from "forge-std/StdInvariant.sol";
-import {ERC20}               from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Test, console2} from "forge-std/Test.sol";
+import {StdInvariant} from "forge-std/StdInvariant.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {ConstantProductAMM} from "../src/AMM.sol";
 
@@ -13,7 +13,10 @@ import {ConstantProductAMM} from "../src/AMM.sol";
 
 contract MockERC20 is ERC20 {
     constructor(string memory n, string memory s) ERC20(n, s) {}
-    function mint(address to, uint256 amt) external { _mint(to, amt); }
+
+    function mint(address to, uint256 amt) external {
+        _mint(to, amt);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -32,11 +35,10 @@ contract MockERC20 is ERC20 {
 ///         Ghost variables track state across calls so the invariant contract
 ///         can assert properties that span multiple transactions.
 contract AMMHandler is Test {
-
     // ── Immutables ────────────────────────────────────────────────────
     ConstantProductAMM public immutable amm;
-    MockERC20          public immutable tok0;
-    MockERC20          public immutable tok1;
+    MockERC20 public immutable tok0;
+    MockERC20 public immutable tok1;
 
     // ── Actors: three distinct users cycle through operations ─────────
     address internal constant USER_A = address(0xF001);
@@ -63,12 +65,12 @@ contract AMMHandler is Test {
     uint256 public kMax;
 
     // ── Internal cap: prevent overflows in fuzz-generated amounts ─────
-    uint256 internal constant MAX_SWAP    = 1_000e18;    // max single swap
-    uint256 internal constant MAX_DEPOSIT = 100_000e18;  // max single deposit per token
-    uint256 internal constant MINT_BATCH  = 1_000_000e18; // tokens minted per actor per setup
+    uint256 internal constant MAX_SWAP = 1_000e18; // max single swap
+    uint256 internal constant MAX_DEPOSIT = 100_000e18; // max single deposit per token
+    uint256 internal constant MINT_BATCH = 1_000_000e18; // tokens minted per actor per setup
 
     constructor(ConstantProductAMM _amm, MockERC20 _tok0, MockERC20 _tok1) {
-        amm  = _amm;
+        amm = _amm;
         tok0 = _tok0;
         tok1 = _tok1;
 
@@ -84,12 +86,7 @@ contract AMMHandler is Test {
 
         // Seed initial liquidity from USER_A so the pool is never empty.
         vm.prank(USER_A);
-        amm.addLiquidity(
-            100_000e18, 100_000e18,
-            0, 0,
-            USER_A,
-            block.timestamp + 365 days
-        );
+        amm.addLiquidity(100_000e18, 100_000e18, 0, 0, USER_A, block.timestamp + 365 days);
 
         // Record initial k.
         (uint256 r0, uint256 r1) = amm.getReserves();
@@ -106,7 +103,7 @@ contract AMMHandler is Test {
     /// @param  amountIn   Fuzz-generated swap size (bounded to MAX_SWAP).
     function swap0For1(uint256 actorSeed, uint256 amountIn) external {
         address actor = _pickActor(actorSeed);
-        (uint256 r0,)  = amm.getReserves();
+        (uint256 r0,) = amm.getReserves();
 
         // Bound to at most half of reserveIn to avoid InsufficientLiquidity.
         // Also bound to MAX_SWAP for gas/overflow safety.
@@ -118,9 +115,7 @@ contract AMMHandler is Test {
         uint256 kBefore = _currentK();
 
         vm.prank(actor);
-        try amm.swap(address(tok0), amountIn, 0, actor, block.timestamp + 365 days)
-            returns (uint256 amountOut)
-        {
+        try amm.swap(address(tok0), amountIn, 0, actor, block.timestamp + 365 days) returns (uint256 amountOut) {
             // Only count and assert if the swap succeeded.
             assertGt(amountOut, 0, "handler: swap produced zero output");
             uint256 kAfter = _currentK();
@@ -135,7 +130,7 @@ contract AMMHandler is Test {
 
     /// @notice Swaps a bounded amount of token1 for token0.
     function swap1For0(uint256 actorSeed, uint256 amountIn) external {
-        address actor  = _pickActor(actorSeed);
+        address actor = _pickActor(actorSeed);
         (, uint256 r1) = amm.getReserves();
 
         amountIn = bound(amountIn, 1, _min(r1 / 2, MAX_SWAP));
@@ -144,9 +139,7 @@ contract AMMHandler is Test {
         uint256 kBefore = _currentK();
 
         vm.prank(actor);
-        try amm.swap(address(tok1), amountIn, 0, actor, block.timestamp + 365 days)
-            returns (uint256 amountOut)
-        {
+        try amm.swap(address(tok1), amountIn, 0, actor, block.timestamp + 365 days) returns (uint256 amountOut) {
             assertGt(amountOut, 0, "handler: reverse swap produced zero output");
             uint256 kAfter = _currentK();
             assertGe(kAfter, kBefore, "handler swap1For0: k decreased");
@@ -171,12 +164,9 @@ contract AMMHandler is Test {
         uint256 kBefore = _currentK();
 
         vm.prank(actor);
-        try amm.addLiquidity(
-            deposit0, deposit1,
-            0, 0,
-            actor,
-            block.timestamp + 365 days
-        ) returns (uint256, uint256, uint256 lp) {
+        try amm.addLiquidity(deposit0, deposit1, 0, 0, actor, block.timestamp + 365 days) returns (
+            uint256, uint256, uint256 lp
+        ) {
             assertGt(lp, 0, "handler addLiq: minted zero LP tokens");
             uint256 kAfter = _currentK();
             // Adding liquidity must not decrease k.
@@ -196,16 +186,14 @@ contract AMMHandler is Test {
         // Skip if actor holds no LP tokens.
         if (lpBal == 0) return;
 
-        fractionBps   = bound(fractionBps, 1, 10_000);
+        fractionBps = bound(fractionBps, 1, 10_000);
         uint256 toRemove = (lpBal * fractionBps) / 10_000;
         if (toRemove == 0) return;
 
         uint256 kBefore = _currentK();
 
         vm.prank(actor);
-        try amm.removeLiquidity(toRemove, 0, 0, actor, block.timestamp + 365 days)
-            returns (uint256 a0, uint256 a1)
-        {
+        try amm.removeLiquidity(toRemove, 0, 0, actor, block.timestamp + 365 days) returns (uint256 a0, uint256 a1) {
             assertGt(a0 + a1, 0, "handler removeLiq: returned zero tokens");
             // After removal k may decrease (reserves shrink proportionally).
             // We only assert it stays >= 0 (trivially true for uint256).
@@ -269,18 +257,17 @@ contract AMMHandler is Test {
 ///               If totalSupply() > MINIMUM_LIQUIDITY (i.e. an LP added real
 ///               liquidity), neither reserve can be zero.
 contract AMMInvariantTest is StdInvariant, Test {
-
     // ── Contracts ────────────────────────────────────────────────────
-    MockERC20          internal tok0;
-    MockERC20          internal tok1;
+    MockERC20 internal tok0;
+    MockERC20 internal tok1;
     ConstantProductAMM internal amm;
-    AMMHandler         internal handler;
+    AMMHandler internal handler;
 
     // ── Actor set (mirrors the handler) ──────────────────────────────
     address internal constant USER_A = address(0xF001);
     address internal constant USER_B = address(0xF002);
     address internal constant USER_C = address(0xF003);
-    address internal constant DEAD   = address(1);       // minimum liquidity lock
+    address internal constant DEAD = address(1); // minimum liquidity lock
 
     address[4] internal ALL_HOLDERS = [USER_A, USER_B, USER_C, DEAD];
 
@@ -361,8 +348,7 @@ contract AMMInvariantTest is StdInvariant, Test {
         // If swaps occurred, swapCount > 0 — just assert it's tracked correctly.
         // The real assertion is the handler's inline kAfter >= kBefore check.
         // This invariant asserts the ghost variable is coherent.
-        assertGe(handler.kMax(), handler.kMin(),
-            "I-01b: kMax < kMin - ghost tracking is inconsistent");
+        assertGe(handler.kMax(), handler.kMin(), "I-01b: kMax < kMin - ghost tracking is inconsistent");
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -377,11 +363,7 @@ contract AMMInvariantTest is StdInvariant, Test {
             sumBalances += amm.balanceOf(ALL_HOLDERS[i]);
         }
 
-        assertEq(
-            amm.totalSupply(),
-            sumBalances,
-            "I-02: totalSupply != sum of all holder balances"
-        );
+        assertEq(amm.totalSupply(), sumBalances, "I-02: totalSupply != sum of all holder balances");
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -426,8 +408,7 @@ contract AMMInvariantTest is StdInvariant, Test {
         // Because addLiqCount can change this, we only assert the sum-check holds.
         // The definitive assertion is I-02 (totalSupply == sum of balances).
         uint256 ts = amm.totalSupply();
-        assertGe(ts, amm.MINIMUM_LIQUIDITY(),
-            "I-04: totalSupply dropped below MINIMUM_LIQUIDITY");
+        assertGe(ts, amm.MINIMUM_LIQUIDITY(), "I-04: totalSupply dropped below MINIMUM_LIQUIDITY");
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -457,7 +438,7 @@ contract AMMInvariantTest is StdInvariant, Test {
     ///         This invariant catches any upgrade or proxy bug that accidentally
     ///         overwrites the constant slot.
     function invariant_I06_feeConstantsImmutable() public view {
-        assertEq(amm.FEE_NUMERATOR(),   997,  "I-06: FEE_NUMERATOR changed");
+        assertEq(amm.FEE_NUMERATOR(), 997, "I-06: FEE_NUMERATOR changed");
         assertEq(amm.FEE_DENOMINATOR(), 1000, "I-06: FEE_DENOMINATOR changed");
     }
 }

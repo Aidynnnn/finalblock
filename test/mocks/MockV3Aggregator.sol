@@ -17,19 +17,18 @@ pragma solidity ^0.8.24;
 ///
 /// @dev    NEVER deploy to mainnet — test-only contract.
 contract MockV3Aggregator {
-
     // ─────────────────────────────────────────────────────────────────
     // Stored state (mirrors a real Chainlink round)
     // ─────────────────────────────────────────────────────────────────
 
-    uint8  public _decimals;
+    uint8 public _decimals;
     string public _description;
 
-    uint80  public _roundId;
-    int256  public _answer;
+    uint80 public _roundId;
+    int256 public _answer;
     uint256 public _startedAt;
     uint256 public _updatedAt;
-    uint80  public _answeredInRound;
+    uint80 public _answeredInRound;
 
     // ─────────────────────────────────────────────────────────────────
     // Constructor
@@ -38,13 +37,13 @@ contract MockV3Aggregator {
     /// @param decimals_      Feed decimal count (e.g. 8 for most USD feeds).
     /// @param initialAnswer  Initial price answer in raw feed units.
     constructor(uint8 decimals_, int256 initialAnswer) {
-        _decimals     = decimals_;
-        _description  = "Mock Feed";
+        _decimals = decimals_;
+        _description = "Mock Feed";
 
-        _roundId         = 1;
-        _answer          = initialAnswer;
-        _startedAt       = block.timestamp;
-        _updatedAt       = block.timestamp;
+        _roundId = 1;
+        _answer = initialAnswer;
+        _startedAt = block.timestamp;
+        _updatedAt = block.timestamp;
         _answeredInRound = 1;
     }
 
@@ -63,13 +62,7 @@ contract MockV3Aggregator {
     function latestRoundData()
         external
         view
-        returns (
-            uint80  roundId,
-            int256  answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80  answeredInRound
-        )
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         return (_roundId, _answer, _startedAt, _updatedAt, _answeredInRound);
     }
@@ -83,10 +76,10 @@ contract MockV3Aggregator {
     ///         adapter accepts it.  Sets updatedAt = block.timestamp so the price
     ///         is always fresh unless the test warps time afterward.
     function updateAnswer(int256 answer) external {
-        _roundId        += 1;
-        _answer          = answer;
-        _startedAt       = block.timestamp;
-        _updatedAt       = block.timestamp;
+        _roundId += 1;
+        _answer = answer;
+        _startedAt = block.timestamp;
+        _updatedAt = block.timestamp;
         _answeredInRound = _roundId;
     }
 
@@ -97,16 +90,16 @@ contract MockV3Aggregator {
     ///           - far-past updatedAt         → stale price
     ///           - answer <= 0               → invalid price
     function updateRoundData(
-        uint80  roundId_,
-        int256  answer_,
+        uint80 roundId_,
+        int256 answer_,
         uint256 startedAt_,
         uint256 updatedAt_,
-        uint80  answeredInRound_
+        uint80 answeredInRound_
     ) external {
-        _roundId         = roundId_;
-        _answer          = answer_;
-        _startedAt       = startedAt_;
-        _updatedAt       = updatedAt_;
+        _roundId = roundId_;
+        _answer = answer_;
+        _startedAt = startedAt_;
+        _updatedAt = updatedAt_;
         _answeredInRound = answeredInRound_;
     }
 

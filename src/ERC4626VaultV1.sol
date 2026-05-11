@@ -2,17 +2,17 @@
 pragma solidity ^0.8.24;
 
 // ─── OpenZeppelin non-upgradeable utilities (already in lib/) ────────────────
-import {IERC20}         from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {SafeERC20}      from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Math}           from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 // ─── UUPS infrastructure (in lib/openzeppelin-contracts/contracts/proxy/) ─────
-import {Initializable}   from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 // ─── Project contracts ────────────────────────────────────────────────────────
-import {IPriceFeedAdapter}  from "./ChainlinkPriceFeedAdapter.sol";
+import {IPriceFeedAdapter} from "./ChainlinkPriceFeedAdapter.sol";
 import {ConstantProductAMM} from "./AMM.sol";
 
 /// @title  ERC4626VaultV1
@@ -63,10 +63,10 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     // Constants
     // ────────────────────────────────────────────────────────────────
 
-    uint8  public constant DECIMALS_OFFSET = 6;
+    uint8 public constant DECIMALS_OFFSET = 6;
 
     uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED     = 2;
+    uint256 private constant _ENTERED = 2;
 
     // ────────────────────────────────────────────────────────────────
     // ERC-7201 Namespaced Storage
@@ -75,15 +75,15 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     /// @custom:storage-location erc7201:bcht2.storage.ERC4626VaultV1
     struct VaultV1Storage {
         // ── ERC-20 ────────────────────────────────────────────────────
-        string  name;
-        string  symbol;
+        string name;
+        string symbol;
         uint256 totalSupply;
-        mapping(address => uint256)                     balances;
+        mapping(address => uint256) balances;
         mapping(address => mapping(address => uint256)) allowances;
 
         // ── ERC-4626 ──────────────────────────────────────────────────
         IERC20 asset;
-        uint8  underlyingDecimals;
+        uint8 underlyingDecimals;
 
         // ── Ownable ───────────────────────────────────────────────────
         address owner;
@@ -96,9 +96,9 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
 
         // ── Vault-specific ────────────────────────────────────────────
         ConstantProductAMM amm;
-        IPriceFeedAdapter  priceFeedAdapter;
-        address            token0Feed;
-        address            token1Feed;
+        IPriceFeedAdapter priceFeedAdapter;
+        address token0Feed;
+        address token1Feed;
     }
 
     /// @dev Returns a pointer to the V1 storage struct.
@@ -107,9 +107,8 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     ///      Computing it in a `pure` function (valid: no state reads) avoids
     ///      needing to pre-compute and hard-code a hex constant.
     function _getVaultStorage() internal pure returns (VaultV1Storage storage $) {
-        bytes32 slot = keccak256(
-            abi.encode(uint256(keccak256("bcht2.storage.ERC4626VaultV1")) - 1)
-        ) & ~bytes32(uint256(0xff));
+        bytes32 slot =
+            keccak256(abi.encode(uint256(keccak256("bcht2.storage.ERC4626VaultV1")) - 1)) & ~bytes32(uint256(0xff));
         // solhint-disable-next-line no-inline-assembly
         assembly {
             $.slot := slot
@@ -154,11 +153,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
 
     event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
     event Withdraw(
-        address indexed sender,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -210,19 +205,17 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     /// @param ammAddress    ConstantProductAMM address (for reserve queries).
     /// @param adapter       Chainlink price-feed adapter; pass address(0) to skip.
     /// @param initialOwner  Address that receives the Owner role.
-    function initialize(
-        address lpToken,
-        address ammAddress,
-        address adapter,
-        address initialOwner
-    ) external initializer {
+    function initialize(address lpToken, address ammAddress, address adapter, address initialOwner)
+        external
+        initializer
+    {
         if (lpToken == address(0) || ammAddress == address(0)) revert Vault__ZeroAddress();
         if (initialOwner == address(0)) revert Vault__ZeroAddress();
 
         VaultV1Storage storage $ = _getVaultStorage();
 
         // ERC-20
-        $.name   = "DeFiApp Vault Share";
+        $.name = "DeFiApp Vault Share";
         $.symbol = "DVLT";
 
         // ERC-4626
@@ -249,7 +242,9 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
 
     /// @notice Restricts upgrade execution to the current owner / timelock.
     /// @dev    Called by `upgradeToAndCall` in `UUPSUpgradeable`.
-    function _authorizeUpgrade(address /*newImplementation*/)
+    function _authorizeUpgrade(
+        address /*newImplementation*/
+    )
         internal
         override
         onlyOwner
@@ -371,7 +366,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
         whenNotPaused
         returns (uint256 shares)
     {
-        if (assets == 0)            revert Vault__ZeroAmount();
+        if (assets == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
         shares = previewDeposit(assets);
         if (shares < minShares) revert Vault__MinSharesNotMet(shares, minShares);
@@ -379,13 +374,8 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     }
 
     /// @notice Standard ERC-4626 deposit (no slippage param).
-    function deposit(uint256 assets, address receiver)
-        public
-        nonReentrant
-        whenNotPaused
-        returns (uint256 shares)
-    {
-        if (assets == 0)            revert Vault__ZeroAmount();
+    function deposit(uint256 assets, address receiver) public nonReentrant whenNotPaused returns (uint256 shares) {
+        if (assets == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
         uint256 maxAssets = maxDeposit(receiver);
         if (assets > maxAssets) revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
@@ -400,7 +390,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
         whenNotPaused
         returns (uint256 assets)
     {
-        if (shares == 0)            revert Vault__ZeroAmount();
+        if (shares == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
         assets = previewMint(shares);
         if (assets > maxAssets) revert Vault__MinAssetsNotMet(assets, maxAssets);
@@ -408,13 +398,8 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     }
 
     /// @notice Standard ERC-4626 mint (no slippage param).
-    function mint(uint256 shares, address receiver)
-        public
-        nonReentrant
-        whenNotPaused
-        returns (uint256 assets)
-    {
-        if (shares == 0)            revert Vault__ZeroAmount();
+    function mint(uint256 shares, address receiver) public nonReentrant whenNotPaused returns (uint256 assets) {
+        if (shares == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
         uint256 maxShares = maxMint(receiver);
         if (shares > maxShares) revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
@@ -432,7 +417,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
         nonReentrant
         returns (uint256 shares)
     {
-        if (assets == 0)            revert Vault__ZeroAmount();
+        if (assets == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
         shares = previewWithdraw(assets);
         if (shares > maxShares) revert Vault__MinSharesNotMet(shares, maxShares);
@@ -440,12 +425,8 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     }
 
     /// @notice Standard ERC-4626 withdraw (no slippage param).
-    function withdraw(uint256 assets, address receiver, address owner_)
-        public
-        nonReentrant
-        returns (uint256 shares)
-    {
-        if (assets == 0)            revert Vault__ZeroAmount();
+    function withdraw(uint256 assets, address receiver, address owner_) public nonReentrant returns (uint256 shares) {
+        if (assets == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
         uint256 maxAssets = maxWithdraw(owner_);
         if (assets > maxAssets) revert ERC4626ExceededMaxWithdraw(owner_, assets, maxAssets);
@@ -459,7 +440,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
         nonReentrant
         returns (uint256 assets)
     {
-        if (shares == 0)            revert Vault__ZeroAmount();
+        if (shares == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
         assets = previewRedeem(shares);
         if (assets < minAssets) revert Vault__MinAssetsNotMet(assets, minAssets);
@@ -467,12 +448,8 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     }
 
     /// @notice Standard ERC-4626 redeem (no slippage param).
-    function redeem(uint256 shares, address receiver, address owner_)
-        public
-        nonReentrant
-        returns (uint256 assets)
-    {
-        if (shares == 0)            revert Vault__ZeroAmount();
+    function redeem(uint256 shares, address receiver, address owner_) public nonReentrant returns (uint256 assets) {
+        if (shares == 0) revert Vault__ZeroAmount();
         if (receiver == address(0)) revert Vault__ZeroAddress();
         uint256 maxShares = maxRedeem(owner_);
         if (shares > maxShares) revert ERC4626ExceededMaxRedeem(owner_, shares, maxShares);
@@ -593,7 +570,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
 
     function _transfer(address from, address to, uint256 value) internal {
         if (from == address(0)) revert ERC20InvalidSender(from);
-        if (to   == address(0)) revert ERC20InvalidReceiver(to);
+        if (to == address(0)) revert ERC20InvalidReceiver(to);
         _update(from, to, value);
     }
 
@@ -614,18 +591,24 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
         } else {
             uint256 bal = $.balances[from];
             if (bal < value) revert ERC20InsufficientBalance(from, bal, value);
-            unchecked { $.balances[from] = bal - value; }
+            unchecked {
+                $.balances[from] = bal - value;
+            }
         }
         if (to == address(0)) {
-            unchecked { $.totalSupply -= value; }
+            unchecked {
+                $.totalSupply -= value;
+            }
         } else {
-            unchecked { $.balances[to] += value; }
+            unchecked {
+                $.balances[to] += value;
+            }
         }
         emit Transfer(from, to, value);
     }
 
     function _approve(address owner_, address spender, uint256 value) internal {
-        if (owner_  == address(0)) revert ERC20InvalidApprover(owner_);
+        if (owner_ == address(0)) revert ERC20InvalidApprover(owner_);
         if (spender == address(0)) revert ERC20InvalidSpender(spender);
         _getVaultStorage().allowances[owner_][spender] = value;
         emit Approval(owner_, spender, value);
@@ -635,7 +618,9 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
         uint256 current = allowance(owner_, spender);
         if (current != type(uint256).max) {
             if (current < value) revert ERC20InsufficientAllowance(spender, current, value);
-            unchecked { _approve(owner_, spender, current - value); }
+            unchecked {
+                _approve(owner_, spender, current - value);
+            }
         }
     }
 
@@ -648,28 +633,12 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
         return DECIMALS_OFFSET;
     }
 
-    function _convertToShares(uint256 assets, Math.Rounding rounding)
-        internal
-        view
-        returns (uint256)
-    {
-        return assets.mulDiv(
-            totalSupply() + 10 ** uint256(_decimalsOffset()),
-            totalAssets() + 1,
-            rounding
-        );
+    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view returns (uint256) {
+        return assets.mulDiv(totalSupply() + 10 ** uint256(_decimalsOffset()), totalAssets() + 1, rounding);
     }
 
-    function _convertToAssets(uint256 shares, Math.Rounding rounding)
-        internal
-        view
-        returns (uint256)
-    {
-        return shares.mulDiv(
-            totalAssets() + 1,
-            totalSupply() + 10 ** uint256(_decimalsOffset()),
-            rounding
-        );
+    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view returns (uint256) {
+        return shares.mulDiv(totalAssets() + 1, totalSupply() + 10 ** uint256(_decimalsOffset()), rounding);
     }
 
     /// @dev CEI: effects (_mint) before interactions (safeTransferFrom).
@@ -680,13 +649,10 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     }
 
     /// @dev CEI: effects (_burn) before interactions (safeTransfer).
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner_,
-        uint256 assets,
-        uint256 shares
-    ) internal virtual {
+    function _withdraw(address caller, address receiver, address owner_, uint256 assets, uint256 shares)
+        internal
+        virtual
+    {
         if (caller != owner_) {
             _spendAllowance(owner_, caller, shares);
         }
@@ -700,8 +666,12 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     // ════════════════════════════════════════════════════════════════
 
     function _tryGetAssetDecimals(IERC20Metadata token_) private view returns (uint8) {
-        try token_.decimals() returns (uint8 d) { return d; }
-        catch { return 18; }
+        try token_.decimals() returns (uint8 d) {
+            return d;
+        }
+            catch {
+            return 18;
+        }
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -745,11 +715,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
 
     /// @dev Yul-optimised floor(x * y / d).
     ///      Reverts on zero denominator or result overflow (same as OZ).
-    function _yulMulDivFloor(uint256 x, uint256 y, uint256 d)
-        internal
-        pure
-        returns (uint256 result)
-    {
+    function _yulMulDivFloor(uint256 x, uint256 y, uint256 d) internal pure returns (uint256 result) {
         assembly ("memory-safe") {
             // ── Guard ──────────────────────────────────────────────────
             if iszero(d) { revert(0, 0) }
@@ -785,14 +751,14 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
                 // ── Factor all powers-of-2 out of d ───────────────────
                 // twos = d & -d  isolates the lowest set bit of d
                 let twos := and(d, sub(0, d))
-                d    := div(d, twos)           // d is now odd
-                lo   := div(lo, twos)          // right-shift lo
+                d := div(d, twos) // d is now odd
+                lo := div(lo, twos) // right-shift lo
 
                 // Merge high bits via 2^256/twos.
                 // sub(0,twos)/twos = 2^256/twos - 1; add 1 gives 2^256/twos
                 // (wraps to 0 when twos=1, which is harmless).
                 twos := add(div(sub(0, twos), twos), 1)
-                lo   := or(lo, mul(hi, twos))
+                lo := or(lo, mul(hi, twos))
 
                 // ── Modular inverse of d (now odd) mod 2^256 ──────────
                 // Seed: (3*d) XOR 2  ->  d*inv = 1 (mod 2^4)
@@ -814,11 +780,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     /// @dev Yul-optimised ceil(x * y / d).
     ///      Fast-path savings: uses MOD (5 gas) instead of a second
     ///      MULMOD (8 gas) to detect whether rounding-up is needed.
-    function _yulMulDivCeil(uint256 x, uint256 y, uint256 d)
-        internal
-        pure
-        returns (uint256 result)
-    {
+    function _yulMulDivCeil(uint256 x, uint256 y, uint256 d) internal pure returns (uint256 result) {
         assembly ("memory-safe") {
             if iszero(d) { revert(0, 0) }
 
@@ -841,7 +803,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
                 if iszero(lt(hi, d)) { revert(0, 0) }
 
                 // ── Remainder for ceiling adjustment ───────────────────
-                let r      := mulmod(x, y, d)
+                let r := mulmod(x, y, d)
                 let addOne := gt(r, 0)
 
                 // ── Subtract r from [hi, lo] ───────────────────────────
@@ -850,10 +812,10 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
 
                 // ── Factor + Newton-Raphson (same as Floor slow path) ──
                 let twos := and(d, sub(0, d))
-                d    := div(d, twos)
-                lo   := div(lo, twos)
+                d := div(d, twos)
+                lo := div(lo, twos)
                 twos := add(div(sub(0, twos), twos), 1)
-                lo   := or(lo, mul(hi, twos))
+                lo := or(lo, mul(hi, twos))
 
                 let inv := xor(mul(3, d), 2)
                 inv := mul(inv, sub(2, mul(d, inv)))
@@ -872,12 +834,8 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
 
     /// @dev Yul-backed _convertToShares: picks Floor or Ceil branch
     ///      without the Math.Rounding enum overhead of the Solidity path.
-    function _convertToSharesYul(uint256 assets, Math.Rounding rounding)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 supply  = totalSupply() + 10 ** uint256(_decimalsOffset());
+    function _convertToSharesYul(uint256 assets, Math.Rounding rounding) internal view returns (uint256) {
+        uint256 supply = totalSupply() + 10 ** uint256(_decimalsOffset());
         uint256 assets_ = totalAssets() + 1;
         if (rounding == Math.Rounding.Ceil) {
             return _yulMulDivCeil(assets, supply, assets_);
@@ -886,13 +844,9 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     }
 
     /// @dev Yul-backed _convertToAssets: picks Floor or Ceil branch.
-    function _convertToAssetsYul(uint256 shares, Math.Rounding rounding)
-        internal
-        view
-        returns (uint256)
-    {
+    function _convertToAssetsYul(uint256 shares, Math.Rounding rounding) internal view returns (uint256) {
         uint256 assets_ = totalAssets() + 1;
-        uint256 supply  = totalSupply() + 10 ** uint256(_decimalsOffset());
+        uint256 supply = totalSupply() + 10 ** uint256(_decimalsOffset());
         if (rounding == Math.Rounding.Ceil) {
             return _yulMulDivCeil(shares, assets_, supply);
         }
@@ -927,22 +881,12 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     //     measurements isolate the arithmetic cost alone.
 
     /// @notice Solidity mulDiv — baseline for the gas report.
-    function mathSolidity(uint256 x, uint256 y, uint256 d, bool ceil)
-        public
-        pure
-        returns (uint256)
-    {
-        return ceil
-            ? x.mulDiv(y, d, Math.Rounding.Ceil)
-            : x.mulDiv(y, d, Math.Rounding.Floor);
+    function mathSolidity(uint256 x, uint256 y, uint256 d, bool ceil) public pure returns (uint256) {
+        return ceil ? x.mulDiv(y, d, Math.Rounding.Ceil) : x.mulDiv(y, d, Math.Rounding.Floor);
     }
 
     /// @notice Yul mulDiv — optimised path for the gas report.
-    function mathYul(uint256 x, uint256 y, uint256 d, bool ceil)
-        public
-        pure
-        returns (uint256)
-    {
+    function mathYul(uint256 x, uint256 y, uint256 d, bool ceil) public pure returns (uint256) {
         return ceil ? _yulMulDivCeil(x, y, d) : _yulMulDivFloor(x, y, d);
     }
 }
