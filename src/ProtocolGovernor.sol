@@ -375,12 +375,11 @@ contract ProtocolGovernor is
     /// @param  calldatas       Same arrays passed to propose().
     /// @param  descriptionHash keccak256(description) — must match the original.
     /// @return proposalId      The queued proposal's ID.
-    function queue(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 descriptionHash
-    ) public override returns (uint256) {
+    function queue(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
+        public
+        override
+        returns (uint256)
+    {
         return super.queue(targets, values, calldatas, descriptionHash);
     }
 

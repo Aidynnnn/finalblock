@@ -668,8 +668,7 @@ contract ERC4626VaultV1 is Initializable, UUPSUpgradeable {
     function _tryGetAssetDecimals(IERC20Metadata token_) private view returns (uint8) {
         try token_.decimals() returns (uint8 d) {
             return d;
-        }
-            catch {
+        } catch {
             return 18;
         }
     }
