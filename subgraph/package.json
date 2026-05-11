@@ -1,0 +1,18 @@
+{
+  "name": "bcht2-defi-subgraph",
+  "version": "1.0.0",
+  "description": "The Graph subgraph for the BCHT2 DeFi Super-App protocol",
+  "license": "MIT",
+  "scripts": {
+    "codegen":       "graph codegen",
+    "build":         "graph build",
+    "deploy":        "graph deploy --studio bcht2-defi-subgraph",
+    "create-local":  "graph create  --node http://localhost:8020/ bcht2-defi-subgraph",
+    "remove-local":  "graph remove  --node http://localhost:8020/ bcht2-defi-subgraph",
+    "deploy-local":  "graph deploy  --node http://localhost:8020/ --ipfs http://localhost:5001 bcht2-defi-subgraph"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "^0.73.0",
+    "@graphprotocol/graph-ts":  "^0.35.1"
+  }
+}

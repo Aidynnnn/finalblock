@@ -1,0 +1,233 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# BCHT2 DeFi Super-App — The Graph Schema
+#
+# Entity hierarchy:
+#
+#   AMM layer
+#     Pool           — aggregate state per ConstantProductAMM deployment
+#     Swap           — individual swap records (one per Swap event)
+#     LiquidityEvent — add-liquidity / remove-liquidity records
+#
+#   Vault layer
+#     VaultFactory   — aggregate state for the VaultFactory contract
+#     Vault          — aggregate state per deployed ERC4626 vault proxy
+#     VaultDeposit   — individual deposit records (one per Deposit event)
+#     VaultWithdrawal— individual withdrawal records (one per Withdraw event)
+#
+#   Governance layer
+#     Proposal       — one record per governance proposal lifecycle
+#     Vote           — one record per VoteCast event
+#
+#   Aggregates
+#     ProtocolDayData— protocol-wide daily roll-up (swaps, volume, deposits)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────
+# AMM Entities
+# ─────────────────────────────────────────────────────────────────
+
+"""
+Represents a ConstantProductAMM liquidity pool.
+Tracks cumulative volume and current reserve state.
+ID = the AMM contract address (lowercase hex).
+"""
+type Pool @entity {
+  id:                  ID!       # AMM contract address
+  token0:              Bytes!    # always the lower-address token
+  token1:              Bytes!
+  reserve0:            BigInt!   # current reserve of token0
+  reserve1:            BigInt!   # current reserve of token1
+  totalVolumeToken0:   BigInt!   # all-time token0 traded through swaps
+  totalVolumeToken1:   BigInt!   # all-time token1 traded through swaps
+  swapCount:           BigInt!   # total number of swaps
+  txCount:             BigInt!   # total number of txs that touched this pool
+  updatedAtBlock:      BigInt!
+  updatedAtTimestamp:  BigInt!
+  # Reverse lookups
+  swaps:               [Swap!]!           @derivedFrom(field: "pool")
+  liquidityEvents:     [LiquidityEvent!]! @derivedFrom(field: "pool")
+}
+
+"""
+A single swap executed in the AMM.
+ID = txHash-logIndex (globally unique).
+"""
+type Swap @entity {
+  id:               ID!
+  pool:             Pool!
+  swapper:          Bytes!    # address that called swap()
+  tokenIn:          Bytes!    # token address sent into the pool
+  amountIn:         BigInt!
+  amountOut:        BigInt!
+  blockNumber:      BigInt!
+  timestamp:        BigInt!
+  transactionHash:  Bytes!
+}
+
+"""
+A single add-liquidity or remove-liquidity event.
+ID = txHash-logIndex.
+"""
+type LiquidityEvent @entity {
+  id:               ID!
+  pool:             Pool!
+  provider:         Bytes!    # address that called addLiquidity / removeLiquidity
+  amount0:          BigInt!   # token0 deposited (add) or withdrawn (remove)
+  amount1:          BigInt!
+  lpTokensDelta:    BigInt!   # LP tokens minted (positive) or burned (negative)
+  eventType:        String!   # "ADD" or "REMOVE"
+  blockNumber:      BigInt!
+  timestamp:        BigInt!
+  transactionHash:  Bytes!
+}
+
+# ─────────────────────────────────────────────────────────────────
+# Vault Entities
+# ─────────────────────────────────────────────────────────────────
+
+"""
+Represents the VaultFactory contract.
+ID = VaultFactory contract address.
+Only one record exists in a standard deployment.
+"""
+type VaultFactory @entity {
+  id:              ID!
+  owner:           Bytes!
+  implementation:  Bytes!   # current ERC4626VaultV1 implementation address
+  vaultCount:      BigInt!
+  vaults:          [Vault!]! @derivedFrom(field: "factory")
+}
+
+"""
+Represents a deployed ERC4626 vault proxy.
+ID = proxy contract address.
+"""
+type Vault @entity {
+  id:                    ID!
+  factory:               VaultFactory!
+  lpToken:               Bytes!    # the ERC-20 LP token accepted as underlying asset
+  paused:                Boolean!
+  priceFeedAdapter:      Bytes     # nullable — may not be configured at deploy time
+  totalAssetsDeposited:  BigInt!   # all-time LP tokens deposited
+  totalSharesMinted:     BigInt!   # all-time vault shares minted
+  totalAssetsWithdrawn:  BigInt!   # all-time LP tokens withdrawn
+  totalSharesBurned:     BigInt!   # all-time vault shares burned
+  depositCount:          BigInt!
+  withdrawalCount:       BigInt!
+  createdAtBlock:        BigInt!
+  createdAtTimestamp:    BigInt!
+  # Reverse lookups
+  deposits:    [VaultDeposit!]!    @derivedFrom(field: "vault")
+  withdrawals: [VaultWithdrawal!]! @derivedFrom(field: "vault")
+}
+
+"""
+A single ERC-4626 deposit (LP tokens in → vault shares out).
+ID = txHash-logIndex.
+"""
+type VaultDeposit @entity {
+  id:               ID!
+  vault:            Vault!
+  sender:           Bytes!   # msg.sender (may differ from owner for permit-based deposits)
+  owner:            Bytes!   # share recipient
+  assets:           BigInt!  # LP tokens deposited
+  shares:           BigInt!  # vault shares minted
+  blockNumber:      BigInt!
+  timestamp:        BigInt!
+  transactionHash:  Bytes!
+}
+
+"""
+A single ERC-4626 withdrawal (vault shares in → LP tokens out).
+ID = txHash-logIndex.
+"""
+type VaultWithdrawal @entity {
+  id:               ID!
+  vault:            Vault!
+  sender:           Bytes!   # msg.sender (may be a delegated redeemer)
+  receiver:         Bytes!   # LP token recipient
+  owner:            Bytes!   # share owner
+  assets:           BigInt!  # LP tokens withdrawn
+  shares:           BigInt!  # vault shares burned
+  blockNumber:      BigInt!
+  timestamp:        BigInt!
+  transactionHash:  Bytes!
+}
+
+# ─────────────────────────────────────────────────────────────────
+# Governance Entities
+# ─────────────────────────────────────────────────────────────────
+
+"""
+A ProtocolGovernor proposal.
+ID = proposalId (hex string of the uint256 hash).
+Lifecycle fields (queued, executed, canceled) are updated as state-change
+events fire.  Vote tallies are updated incrementally as VoteCast events arrive.
+"""
+type Proposal @entity {
+  id:               ID!       # proposalId as hex string
+  proposalId:       BigInt!   # the raw uint256
+  proposer:         Bytes!
+  # Call data (one entry per target)
+  targets:          [Bytes!]!
+  values:           [BigInt!]!
+  calldatas:        [Bytes!]!
+  description:      String!
+  # Timing (timestamp-based clock, same unit as block.timestamp)
+  voteStart:        BigInt!   # Unix seconds when voting opens
+  voteEnd:          BigInt!   # Unix seconds when voting closes
+  # State transitions
+  queued:           Boolean!
+  etaSeconds:       BigInt    # set when queued; null until then
+  executed:         Boolean!
+  canceled:         Boolean!
+  # Running tallies (updated as VoteCast events arrive)
+  forVotes:         BigInt!
+  againstVotes:     BigInt!
+  abstainVotes:     BigInt!
+  voterCount:       BigInt!   # unique voters who cast a ballot
+  # Metadata
+  createdAtBlock:   BigInt!
+  createdAtTimestamp: BigInt!
+  # Reverse lookup
+  votes:            [Vote!]!  @derivedFrom(field: "proposal")
+}
+
+"""
+A single VoteCast event.
+ID = proposalId-voterAddress (one per voter per proposal; re-voting is not
+possible in GovernorCountingSimple so this ID is safe to use as primary key).
+"""
+type Vote @entity {
+  id:               ID!
+  proposal:         Proposal!
+  voter:            Bytes!
+  support:          Int!      # 0 = Against, 1 = For, 2 = Abstain
+  weight:           BigInt!   # DGOV voting power at the proposal snapshot
+  reason:           String!   # optional on-chain rationale string
+  blockNumber:      BigInt!
+  timestamp:        BigInt!
+  transactionHash:  Bytes!
+}
+
+# ─────────────────────────────────────────────────────────────────
+# Protocol-wide Daily Aggregate
+# ─────────────────────────────────────────────────────────────────
+
+"""
+Protocol-wide daily roll-up.
+ID = Unix day start timestamp as a string (e.g. "1700000000" rounded down
+to the nearest day = timestamp / 86400 * 86400).
+One record per UTC day across the whole protocol.
+"""
+type ProtocolDayData @entity {
+  id:                   ID!
+  date:                 BigInt!   # UTC day start timestamp (seconds)
+  dailySwapCount:       BigInt!
+  dailyVolumeToken0:    BigInt!   # sum of amountIn for token0-in swaps
+  dailyVolumeToken1:    BigInt!   # sum of amountIn for token1-in swaps
+  dailyDepositCount:    BigInt!
+  dailyWithdrawalCount: BigInt!
+  dailyProposalCount:   BigInt!
+  dailyVoteCount:       BigInt!
+}

@@ -1,0 +1,222 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# BCHT2 DeFi Super-App — Frontend GraphQL Queries
+#
+# Each query is documented with:
+#   Purpose     — what the UI uses it for
+#   Variables   — client-supplied inputs
+#   Returns     — the key fields consumed by the frontend
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────────────────────────
+# Query 1 — AMM Pool Dashboard
+#
+# Purpose:  Render the main pool overview page — current reserves,
+#           all-time trading volumes, and the 10 most recent swaps.
+# Variables:
+#   $poolId   String   lowercase AMM contract address
+# Returns:   Pool stats + last 10 Swap records for the trade history table.
+# ─────────────────────────────────────────────────────────────────
+query PoolDashboard($poolId: ID!) {
+  pool(id: $poolId) {
+    id
+    token0
+    token1
+    reserve0
+    reserve1
+    totalVolumeToken0
+    totalVolumeToken1
+    swapCount
+    txCount
+    updatedAtTimestamp
+
+    swaps(
+      first: 10
+      orderBy: timestamp
+      orderDirection: desc
+    ) {
+      id
+      swapper
+      tokenIn
+      amountIn
+      amountOut
+      timestamp
+      transactionHash
+    }
+  }
+}
+
+
+# ─────────────────────────────────────────────────────────────────
+# Query 2 — Protocol-wide Daily Activity Chart
+#
+# Purpose:  Power a 30-day bar chart showing swap volume, deposit count,
+#           and governance activity across the whole protocol.
+# Variables:
+#   $since  BigInt   Unix timestamp of the earliest day to include
+#                    (e.g. Date.now()/1000 - 30*86400)
+# Returns:  Array of ProtocolDayData records sorted oldest-first.
+# ─────────────────────────────────────────────────────────────────
+query DailyProtocolActivity($since: BigInt!) {
+  protocolDayDatas(
+    where:        { date_gte: $since }
+    orderBy:      date
+    orderDirection: asc
+    first:        30
+  ) {
+    id
+    date
+    dailySwapCount
+    dailyVolumeToken0
+    dailyVolumeToken1
+    dailyDepositCount
+    dailyWithdrawalCount
+    dailyProposalCount
+    dailyVoteCount
+  }
+}
+
+
+# ─────────────────────────────────────────────────────────────────
+# Query 3 — Vault Portfolio for a User
+#
+# Purpose:  Show a user's deposits and withdrawals across all vaults
+#           so the frontend can compute net position and history.
+# Variables:
+#   $user   Bytes    checksummed/lowercase wallet address
+#   $skip   Int      pagination offset (default 0)
+#   $first  Int      page size (default 20)
+# Returns:  VaultDeposit and VaultWithdrawal records owned by the user,
+#           each enriched with the parent Vault's LP token address.
+# ─────────────────────────────────────────────────────────────────
+query UserVaultActivity($user: Bytes!, $skip: Int = 0, $first: Int = 20) {
+  deposits: vaultDeposits(
+    where:        { owner: $user }
+    orderBy:      timestamp
+    orderDirection: desc
+    skip:         $skip
+    first:        $first
+  ) {
+    id
+    assets
+    shares
+    timestamp
+    transactionHash
+    vault {
+      id
+      lpToken
+      paused
+    }
+  }
+
+  withdrawals: vaultWithdrawals(
+    where:        { owner: $user }
+    orderBy:      timestamp
+    orderDirection: desc
+    skip:         $skip
+    first:        $first
+  ) {
+    id
+    assets
+    shares
+    receiver
+    timestamp
+    transactionHash
+    vault {
+      id
+      lpToken
+    }
+  }
+}
+
+
+# ─────────────────────────────────────────────────────────────────
+# Query 4 — Governance Proposal List
+#
+# Purpose:  Render the governance dashboard with all proposals,
+#           current vote tallies, and lifecycle status flags.
+#           Sorting by voteEnd descending puts the most recent / active
+#           proposals at the top.
+# Variables:
+#   $first  Int   page size (default 10)
+#   $skip   Int   pagination offset (default 0)
+# Returns:  Proposal records with vote tallies; does NOT include
+#           individual Vote records (use Query 5 for that detail).
+# ─────────────────────────────────────────────────────────────────
+query GovernanceProposals($first: Int = 10, $skip: Int = 0) {
+  proposals(
+    orderBy:      voteEnd
+    orderDirection: desc
+    first:        $first
+    skip:         $skip
+  ) {
+    id
+    proposalId
+    proposer
+    description
+    voteStart
+    voteEnd
+    queued
+    etaSeconds
+    executed
+    canceled
+    forVotes
+    againstVotes
+    abstainVotes
+    voterCount
+    createdAtTimestamp
+  }
+}
+
+
+# ─────────────────────────────────────────────────────────────────
+# Query 5 — Proposal Detail with Individual Votes
+#
+# Purpose:  Render a single proposal's detail page — full call data,
+#           lifecycle timeline, and the paginated list of individual
+#           ballots cast by delegates.
+# Variables:
+#   $proposalId  ID    hex-string proposal ID (e.g. "0x1a2b3c...")
+#   $first       Int   votes page size (default 20)
+#   $skip        Int   votes pagination offset (default 0)
+# Returns:  All Proposal fields + paginated Vote records sorted by
+#           descending voting weight (largest delegates first).
+# ─────────────────────────────────────────────────────────────────
+query ProposalDetail($proposalId: ID!, $first: Int = 20, $skip: Int = 0) {
+  proposal(id: $proposalId) {
+    id
+    proposalId
+    proposer
+    targets
+    values
+    calldatas
+    description
+    voteStart
+    voteEnd
+    queued
+    etaSeconds
+    executed
+    canceled
+    forVotes
+    againstVotes
+    abstainVotes
+    voterCount
+    createdAtBlock
+    createdAtTimestamp
+
+    votes(
+      orderBy:      weight
+      orderDirection: desc
+      first:        $first
+      skip:         $skip
+    ) {
+      id
+      voter
+      support
+      weight
+      reason
+      timestamp
+      transactionHash
+    }
+  }
+}
