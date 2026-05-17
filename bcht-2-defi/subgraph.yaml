@@ -1,0 +1,59 @@
+specVersion: 1.3.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: ProtocolGovernor
+    network: sepolia
+    source:
+      address: "0x20CC59B394f5024C89dFb9483bdE24572B5F4D93"
+      abi: ProtocolGovernor
+      startBlock: 10870766
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - EIP712DomainChanged
+        - ProposalCanceled
+        - ProposalCreated
+        - ProposalExecuted
+        - ProposalQueued
+        - ProposalThresholdSet
+        - QuorumNumeratorUpdated
+        - TimelockChange
+        - VoteCast
+        - VoteCastWithParams
+        - VotingDelaySet
+        - VotingPeriodSet
+      abis:
+        - name: ProtocolGovernor
+          file: ./abis/ProtocolGovernor.json
+      eventHandlers:
+        - event: EIP712DomainChanged()
+          handler: handleEIP712DomainChanged
+        - event: ProposalCanceled(uint256)
+          handler: handleProposalCanceled
+        - event: ProposalCreated(uint256,address,address[],uint256[],string[],bytes[],uint256,uint256,string)
+          handler: handleProposalCreated
+        - event: ProposalExecuted(uint256)
+          handler: handleProposalExecuted
+        - event: ProposalQueued(uint256,uint256)
+          handler: handleProposalQueued
+        - event: ProposalThresholdSet(uint256,uint256)
+          handler: handleProposalThresholdSet
+        - event: QuorumNumeratorUpdated(uint256,uint256)
+          handler: handleQuorumNumeratorUpdated
+        - event: TimelockChange(address,address)
+          handler: handleTimelockChange
+        - event: VoteCast(indexed address,uint256,uint8,uint256,string)
+          handler: handleVoteCast
+        - event: VoteCastWithParams(indexed address,uint256,uint8,uint256,string,bytes)
+          handler: handleVoteCastWithParams
+        - event: VotingDelaySet(uint256,uint256)
+          handler: handleVotingDelaySet
+        - event: VotingPeriodSet(uint256,uint256)
+          handler: handleVotingPeriodSet
+      file: ./src/protocol-governor.ts

@@ -1,0 +1,8 @@
+{
+  "sepolia": {
+    "ProtocolGovernor": {
+      "address": "0x20CC59B394f5024C89dFb9483bdE24572B5F4D93",
+      "startBlock": 10870766
+    }
+  }
+}
