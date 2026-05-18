@@ -134,7 +134,7 @@ function PoolDashboardSection() {
         onRefresh={refetch}
       />
       {loading && <Skeleton rows={3} cols={4} />}
-      {error   && <ErrorCard msg={error} onRetry={refetch} />}
+      {error   && <ErrorCard msg={error} />}
       {!loading && !error && !pool && <EmptyCard msg="Pool not yet indexed. Deploy contracts and seed liquidity first." />}
       {pool && (
         <div className="space-y-4">
@@ -206,7 +206,7 @@ function DailyActivitySection() {
         onRefresh={refetch}
       />
       {loading && <div className="h-36 rounded-xl bg-white/5 animate-pulse" />}
-      {error   && <ErrorCard msg={error} onRetry={refetch} />}
+      {error   && <ErrorCard msg={error} />}
       {!loading && !error && days.length === 0 && <EmptyCard msg="No daily data indexed yet." />}
       {days.length > 0 && (
         <div className="space-y-4">
@@ -291,7 +291,7 @@ function GovernanceSection() {
         onRefresh={refetch}
       />
       {loading && <Skeleton rows={4} cols={5} />}
-      {error   && <ErrorCard msg={error} onRetry={refetch} />}
+      {error   && <ErrorCard msg={error} />}
       {!loading && !error && proposals.length === 0 && <EmptyCard msg="No proposals indexed yet." />}
       {proposals.length > 0 && (
         <div className="space-y-3">
@@ -362,7 +362,7 @@ function UserVaultSection() {
         onRefresh={refetch}
       />
       {loading && <Skeleton rows={4} cols={5} />}
-      {error   && <ErrorCard msg={error} onRetry={refetch} />}
+      {error   && <ErrorCard msg={error} />}
       {!loading && !error && deposits.length === 0 && withdrawals.length === 0 && (
         <EmptyCard msg="No vault activity found for your address." />
       )}
