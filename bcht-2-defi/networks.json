@@ -3,6 +3,9 @@
     "ProtocolGovernor": {
       "address": "0x20CC59B394f5024C89dFb9483bdE24572B5F4D93",
       "startBlock": 10870766
+    },
+    "AMMPool": {
+      "address": "0xbA1B83FB6DCB1021Eb7d8ba700bFc07dfC4bAFb1"
     }
   }
 }

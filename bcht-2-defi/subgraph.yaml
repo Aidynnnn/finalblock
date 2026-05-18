@@ -57,3 +57,32 @@ dataSources:
         - event: VotingPeriodSet(uint256,uint256)
           handler: handleVotingPeriodSet
       file: ./src/protocol-governor.ts
+  - kind: ethereum
+    name: AMMPool
+    network: sepolia
+    source:
+      address: "0xbA1B83FB6DCB1021Eb7d8ba700bFc07dfC4bAFb1"
+      abi: AMMPool
+      startBlock: 10870766
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - CreationPauseToggled
+        - OwnershipTransferred
+        - PairCreated
+        - VanillaPairCreated
+      abis:
+        - name: AMMPool
+          file: ./abis/AMMPool.json
+      eventHandlers:
+        - event: CreationPauseToggled(bool)
+          handler: handleCreationPauseToggled
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: PairCreated(indexed address,indexed address,address,uint256)
+          handler: handlePairCreated
+        - event: VanillaPairCreated(indexed address,indexed address,address,uint256)
+          handler: handleVanillaPairCreated
+      file: ./src/amm-pool.ts
