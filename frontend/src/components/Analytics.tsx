@@ -94,7 +94,7 @@ function Skeleton({ rows = 4, cols = 4 }: { rows?: number; cols?: number }) {
   )
 }
 
-function ErrorCard({ msg, onRetry }: { msg: string; onRetry: () => void }) {
+function ErrorCard({ msg }: { msg: string }) {
   let friendlyMessage = "No historical transactions or indexer data found on Sepolia yet."
   
   if (msg.includes('pool')) {
