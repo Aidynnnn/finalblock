@@ -95,12 +95,19 @@ function Skeleton({ rows = 4, cols = 4 }: { rows?: number; cols?: number }) {
 }
 
 function ErrorCard({ msg, onRetry }: { msg: string; onRetry: () => void }) {
+  let friendlyMessage = "No historical transactions or indexer data found on Sepolia yet."
+  
+  if (msg.includes('pool')) {
+    friendlyMessage = "No active liquidity pool data found on this Sepolia deployment yet."
+  } else if (msg.includes('protocolDayDatas')) {
+    friendlyMessage = "No volume or protocol activity recorded within the last 30 days."
+  } else if (msg.includes('proposals')) {
+    friendlyMessage = "No historical governance proposals found in the indexing database."
+  }
+
   return (
-    <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6 text-center space-y-3">
-      <p className="text-sm text-red-400">{msg}</p>
-      <button onClick={onRetry} className="text-xs text-brand-400 hover:text-brand-300 transition-colors underline">
-        Retry
-      </button>
+    <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
+      <p className="text-sm text-gray-500">{friendlyMessage}</p>
     </div>
   )
 }
